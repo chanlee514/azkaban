@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -148,6 +149,9 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
 			String projectName = getParam(req, "project");
 			String flowName = getParam(req, "flow");
 			ajaxGetFlowRunning(req, resp, ret, session.getUser(), projectName, flowName);
+		}
+		else if (ajaxName.equals("getAllRunning")) {
+			ajaxGetAllFlowRunning(req, resp, ret, session.getUser());
 		}
 		else if (ajaxName.equals("flowInfo")) {
 			String projectName = getParam(req, "project");
@@ -604,6 +608,19 @@ public class ExecutorServlet extends LoginAbstractAzkabanServlet {
 		List<Integer> refs = executorManager.getRunningFlows(project.getId(), flowId);
 		if (!refs.isEmpty()) {
 			ret.put("execIds", refs);
+		}
+	}
+
+	private void ajaxGetAllFlowRunning(HttpServletRequest req, HttpServletResponse resp, HashMap<String, Object> ret, User user) throws ServletException{
+		try {
+			List<ExecutableFlow> runningFlows = executorManager.getRunningFlows();
+			List<Object> execs = runningFlows.stream().map(ExecutableFlow::toObject).collect(Collectors.toList());
+
+			if (!execs.isEmpty()) {
+				ret.put("execs", execs);
+			}
+		} catch (IOException e) {
+			return;
 		}
 	}
 
