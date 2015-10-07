@@ -31,7 +31,7 @@
 					<div class="navbar-enviro-server">${azkaban_label}</div>
 				</div>
         <div class="navbar-collapse collapse">
-#if ($navbar_disabled != 1)
+#if ("$navbar_disabled" != 1)
           <ul class="nav navbar-nav">
 						<li#if($current_page == 'all') class="active"#end onClick="navMenuClick('$!context/')"><a href="$!context/index">Projects</a></li>
 						<li#if($current_page == 'schedule') class="active"#end onClick="navMenuClick('$!context/schedule')"><a href="$!context/schedule">Scheduling</a></li>
