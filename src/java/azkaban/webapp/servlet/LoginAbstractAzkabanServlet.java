@@ -179,7 +179,7 @@ public abstract class LoginAbstractAzkabanServlet extends AbstractAzkabanServlet
 		
 		Session session = getApplication().getSessionCache().getSession(sessionId);
 		// Check if the IP's are equal. If not, we invalidate the sesson.
-		if (session == null || !remoteIp.equals(session.getIp())) {
+		if (session == null /* || !remoteIp.equals(session.getIp()) */) { // remove this to prevent issues with ELB
 			return null;
 		}
 		
