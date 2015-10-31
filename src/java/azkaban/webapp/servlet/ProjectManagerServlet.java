@@ -487,9 +487,12 @@ public class ProjectManagerServlet extends LoginAbstractAzkabanServlet {
 	private void ajaxChangeDescription(Project project, HashMap<String, Object> ret, HttpServletRequest req, User user) throws ServletException {
 		String description = getParam(req, "description");
 		project.setDescription(description);
-		
+
 		try {
 			projectManager.updateProjectDescription(project, description, user);
+
+			projectManager.updateTagsFromDescription(project);
+			projectManager.updateProjectSetting(project);
 		} catch (ProjectManagerException e) {
 			ret.put("error", e.getMessage());
 		}

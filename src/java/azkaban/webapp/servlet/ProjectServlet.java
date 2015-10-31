@@ -17,7 +17,8 @@
 package azkaban.webapp.servlet;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -39,16 +40,16 @@ import azkaban.webapp.session.Session;
  * The main page
  */
 public class ProjectServlet extends LoginAbstractAzkabanServlet {
-	private static final Logger logger = 
+	private static final Logger logger =
 			Logger.getLogger(ProjectServlet.class.getName());
-	private static final String LOCKDOWN_CREATE_PROJECTS_KEY = 
+	private static final String LOCKDOWN_CREATE_PROJECTS_KEY =
 			"lockdown.create.projects";
 	private static final long serialVersionUID = -1;
 
 	private UserManager userManager;
 
 	private boolean lockdownCreateProjects = false;
-	
+
 	@Override
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -61,9 +62,9 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
 			logger.info("Creation of projects is locked down");
 		}
 	}
-	
+
 	@Override
-	protected void handleGet(HttpServletRequest req, HttpServletResponse resp, 
+	protected void handleGet(HttpServletRequest req, HttpServletResponse resp,
 			Session session) throws ServletException, IOException {
 		if (hasParam(req, "doaction")) {
 			if (getParam(req, "doaction").equals("search")) {
@@ -74,41 +75,64 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
 				}
 			}
 		}
-		
+
 		User user = session.getUser();
 
-		ProjectManager manager = 
+		ProjectManager manager =
 				((AzkabanWebServer)getApplication()).getProjectManager();
 		Page page = newPage(
 				req, resp, session, "azkaban/webapp/servlet/velocity/index.vm");
-		
+
 		if (lockdownCreateProjects && !hasPermissionToCreateProject(user)) {
 			page.add("hideCreateProject", true);
 		}
-		
+
+		List<Project> projects = manager.getProjects();
+
+		/**
+		 * Get project tags
+		 */
+		Set<String> projectTags = new HashSet<>();
+		projects.stream()
+                .map(Project::getMetadata)
+                .filter(m -> !m.isEmpty())
+                .map(m -> m.get("tags"))
+                .filter(tags -> tags != null)
+                .forEach(tags -> projectTags.addAll((List<String>) tags));
+
+        page.add("projectTags", projectTags.stream().toArray(String[]::new));
+
 		if (hasParam(req, "all")) {
-			List<Project> projects = manager.getProjects();
 			page.add("viewProjects", "all");
 			page.add("projects", projects);
 		}
-		else if (hasParam(req, "group")) {
-			List<Project> projects = manager.getGroupProjects(user);
+        else if (hasParam(req, "tag")) {
+            String tag = getParam(req, "tag");
+            List<Project> tagMatchProjects = projects.stream().filter(p -> {
+                List<String> tags = (List<String>) p.getMetadata().get("tags");
+                return tags != null && tags.contains(tag);
+            }).collect(Collectors.toList());
+            page.add("viewProjects", "tag-" + tag);
+            page.add("projects", tagMatchProjects);
+        }
+        else if (hasParam(req, "group")) {
+			List<Project> groupProjects = manager.getGroupProjects(user);
 			page.add("viewProjects", "group");
-			page.add("projects", projects);
+			page.add("projects", groupProjects);
 		}
 		else {
-			List<Project> projects = manager.getUserProjects(user);
+			List<Project> userProjects = manager.getUserProjects(user);
 			page.add("viewProjects", "personal");
-			page.add("projects", projects);
+			page.add("projects", userProjects);
 		}
-		
+
 		page.render();
 	}
-	
-	private void handleFilter(HttpServletRequest req, HttpServletResponse resp, 
+
+	private void handleFilter(HttpServletRequest req, HttpServletResponse resp,
 			Session session, String searchTerm) {
 		User user = session.getUser();
-		ProjectManager manager = 
+		ProjectManager manager =
 				((AzkabanWebServer)getApplication()).getProjectManager();
 		Page page = newPage(
 				req, resp, session, "azkaban/webapp/servlet/velocity/index.vm");
@@ -124,7 +148,7 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
 			page.add("projects", projects);
 			page.add("search_term", searchTerm);
 		}
-	
+
 		page.render();
 	}
 
@@ -138,12 +162,12 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
 		for (String roleName: user.getRoles()) {
 			Role role = userManager.getRole(roleName);
 			Permission perm = role.getPermission();
-			if (perm.isPermissionSet(Permission.Type.ADMIN) || 
+			if (perm.isPermissionSet(Permission.Type.ADMIN) ||
 					perm.isPermissionSet(Permission.Type.CREATEPROJECTS)) {
 				return true;
 			}
 		}
-		
+
 		return false;
 	}
 }

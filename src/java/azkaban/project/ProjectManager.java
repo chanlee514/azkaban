@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.zip.ZipFile;
@@ -198,7 +199,12 @@ public class ProjectManager {
 		Project newProject = projectLoader.createNewProject(projectName, description, creator);
 		projectsByName.put(newProject.getName(), newProject);
 		projectsById.put(newProject.getId(), newProject);
-		
+
+		/**
+		 * Set tags
+		 */
+		updateTagsFromDescription(newProject);
+
 		if(creatorDefaultPermissions) {
 		// Add permission to project
 			projectLoader.updatePermission(newProject, creator.getUserId(), new Permission(Permission.Type.ADMIN), false);
@@ -216,6 +222,17 @@ public class ProjectManager {
 		projectLoader.postEvent(newProject, EventType.CREATED, creator.getUserId(), null);
 		
 		return newProject;
+	}
+
+	public void updateTagsFromDescription(Project newProject) {
+		String description = newProject.getDescription();
+		Pattern TAG_REGEX = Pattern.compile("\\S*#([a-zA-Z0-9\\-]+)");
+		ArrayList<Object> tagValues = new ArrayList<>();
+		Matcher matcher = TAG_REGEX.matcher(description);
+		while (matcher.find()) {
+			tagValues.add(matcher.group(1));
+		}
+		newProject.getMetadata().put("tags", tagValues);
 	}
 
 	public synchronized Project removeProject(Project project, User deleter) throws ProjectManagerException {
