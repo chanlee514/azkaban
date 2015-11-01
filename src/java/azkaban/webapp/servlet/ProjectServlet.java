@@ -106,6 +106,11 @@ public class ProjectServlet extends LoginAbstractAzkabanServlet {
 			page.add("viewProjects", "all");
 			page.add("projects", projects);
 		}
+		else if (hasParam(req, "untagged")) {
+			List<Project> untaggedProjects = projects.stream().filter(p -> p.getMetadata().get("tags") == null).collect(Collectors.toList());
+			page.add("viewProjects", "untagged");
+			page.add("projects", untaggedProjects);
+		}
         else if (hasParam(req, "tag")) {
             String tag = getParam(req, "tag");
             List<Project> tagMatchProjects = projects.stream().filter(p -> {
