@@ -25,15 +25,18 @@ import azkaban.metric.MetricException;
 import azkaban.metric.MetricReportManager;
 import azkaban.metric.TimeBasedReportingMetric;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * Metric to keep track of number of failed jobs in between the tracking events
  */
-public class NumFailedJobMetric extends TimeBasedReportingMetric<Integer> implements EventListener {
+public class NumFailedJobMetric extends TimeBasedReportingMetric<Map<String,Integer>> implements EventListener {
   public static final String NUM_FAILED_JOB_METRIC_NAME = "NumFailedJobMetric";
   private static final String NUM_FAILED_JOB_METRIC_TYPE = "uint16";
 
   public NumFailedJobMetric(MetricReportManager manager, long interval) throws MetricException {
-    super(NUM_FAILED_JOB_METRIC_NAME, NUM_FAILED_JOB_METRIC_TYPE, 0, manager, interval);
+    super(NUM_FAILED_JOB_METRIC_NAME, NUM_FAILED_JOB_METRIC_TYPE, new ConcurrentHashMap<>(), manager, interval);
     logger.debug("Instantiated NumFailedJobMetric");
   }
 
@@ -46,7 +49,10 @@ public class NumFailedJobMetric extends TimeBasedReportingMetric<Integer> implem
   public synchronized void handleEvent(Event event) {
     JobRunner runner = (JobRunner) event.getRunner();
     if (event.getType() == Type.JOB_FINISHED && runner.getStatus().equals(Status.FAILED)) {
-      value = value + 1;
+      String flowName = runner.getNode().getParentFlow().getProjectName();
+      if (value.putIfAbsent(flowName, 1) != null) {
+        value.compute(flowName, (s, i) -> i + 1);
+      }
     }
   }
 
@@ -57,7 +63,7 @@ public class NumFailedJobMetric extends TimeBasedReportingMetric<Integer> implem
 
   @Override
   protected synchronized void postTrackingEventMethod() {
-    value = 0;
+    value.clear();
   }
 
 }

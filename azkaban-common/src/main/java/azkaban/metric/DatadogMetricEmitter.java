@@ -37,7 +37,6 @@ public class DatadogMetricEmitter implements IMetricEmitter {
 
     private static DatadogClient datadogClient;
 
-
     public DatadogMetricEmitter(Props azkProps) {
         statsPrefix = azkProps.getString(DATADOG_PREFIX, "azkaban.metrics");
         statsApiKey = azkProps.getString(DATADOG_API_KEY);
@@ -48,22 +47,34 @@ public class DatadogMetricEmitter implements IMetricEmitter {
     @Override
     public void reportMetric(final IMetric<?> metric) throws MetricException {
 
+        List<DatadogClient.DDMetric> series;
+        // Either a Map or assume Integer (from default impl)
+        if (metric.getValue() instanceof Map) {
+            Map<String, Integer> metricMap = (Map<String, Integer>) metric.getValue();
 
-        Map<String, Integer> flowMetrics = (Map<String, Integer>) metric.getValue();
-        if (flowMetrics.isEmpty()) {
-            return;
+            series = metricMap.entrySet().stream().map(metricEntry -> DatadogClient.DDMetric.builder()
+                    .metric(statsPrefix + "." + metric.getName())
+                    .points(ImmutableList.of(
+                            ImmutableList.of(Math.toIntExact(Instant.now().getEpochSecond()), metricEntry.getValue())
+                    ))
+                    .type(DatadogClient.DDMetricType.gauge)
+                    .tags(ImmutableList.of("environment:" + statsEnvironment, "project:" + metricEntry.getKey()))
+                    .build()).collect(Collectors.toList());
+
+        } else {
+            series = ImmutableList.of(
+                    DatadogClient.DDMetric.builder()
+                            .metric(statsPrefix + "." + metric.getName())
+                            .points(ImmutableList.of(
+                                    ImmutableList.of(Math.toIntExact(Instant.now().getEpochSecond()), (Integer) metric.getValue())
+                            ))
+                            .type(DatadogClient.DDMetricType.gauge)
+                            .tags(ImmutableList.of("environment:" + statsEnvironment))
+                            .build());
         }
 
         datadogClient.report(DatadogClient.DDPayload.builder()
-                .series(
-                        flowMetrics.entrySet().stream().map(flowMetric -> DatadogClient.DDMetric.builder()
-                                .metric(statsPrefix + "." + metric.getName())
-                                .points(ImmutableList.of(
-                                        ImmutableList.of(Math.toIntExact(Instant.now().getEpochSecond()), flowMetric.getValue())
-                                ))
-                                .type(DatadogClient.DDMetricType.count)
-                                .tags(ImmutableList.of("environment:" + statsEnvironment, "project:" + flowMetric.getKey()))
-                                .build()).collect(Collectors.toList()))
+                .series(series)
                 .build());
     }
 
