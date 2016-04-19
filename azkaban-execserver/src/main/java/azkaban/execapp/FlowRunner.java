@@ -23,8 +23,10 @@ import azkaban.event.EventListener;
 import azkaban.execapp.event.FlowWatcher;
 import azkaban.execapp.event.JobCallbackManager;
 import azkaban.execapp.jmx.JmxJobMBeanManager;
+import azkaban.execapp.metric.JobDurationMetric;
 import azkaban.execapp.metric.NumFailedJobMetric;
 import azkaban.execapp.metric.NumRunningJobMetric;
+import azkaban.execapp.metric.TotalNumFlowJobsMetric;
 import azkaban.executor.*;
 import azkaban.executor.ExecutionOptions.FailureAction;
 import azkaban.flow.FlowProps;
@@ -108,6 +110,8 @@ public class FlowRunner extends EventHandler implements Runnable {
     // The following is state that will trigger a retry of all failed jobs
     private boolean retryFailedJobs = false;
 
+
+
     /**
      * Constructor. This will create its own ExecutorService for thread pools
      *
@@ -153,7 +157,6 @@ public class FlowRunner extends EventHandler implements Runnable {
         this.finishedNodes = new SwapQueue<ExecutableNode>();
 
         this.addListener(AzkabanExecutorServer.getApp().getClusterManager());
-
     }
 
     public FlowRunner setFlowWatcher(FlowWatcher watcher) {
@@ -199,7 +202,6 @@ public class FlowRunner extends EventHandler implements Runnable {
             logger.info("Fetching job and shared properties.");
             loadAllProperties();
 
-
             this.fireEventListeners(Event.create(this, Type.FLOW_STARTED));
             runFlow();
 
@@ -220,10 +222,10 @@ public class FlowRunner extends EventHandler implements Runnable {
             logger.info("Setting end time for flow " + execId + " to "
                     + System.currentTimeMillis());
 
-
             updateFlow();
             this.fireEventListeners(Event.create(this, Type.FLOW_FINISHED));
             closeLogger();
+
         }
     }
 
@@ -843,6 +845,16 @@ public class FlowRunner extends EventHandler implements Runnable {
             // Adding NumFailedJobMetric listener
             jobRunner.addListener((NumFailedJobMetric) metricManager
                     .getMetricFromName(NumFailedJobMetric.NUM_FAILED_JOB_METRIC_NAME));
+
+            // Adding JobDurationMetric listener
+            jobRunner.addListener((JobDurationMetric) metricManager
+                    .getMetricFromName(JobDurationMetric.JOB_DURATION_METRIC_NAME));
+
+            // Adding TotalNumFlowJobsMetric Listener
+            jobRunner.addListener((TotalNumFlowJobsMetric) metricManager
+                    .getMetricFromName(TotalNumFlowJobsMetric.TOTAL_NUM_FLOW_JOBS_METRIC_NAME));
+
+
 
         }
 
