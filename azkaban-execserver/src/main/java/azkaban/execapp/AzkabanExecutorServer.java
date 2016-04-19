@@ -214,7 +214,6 @@ public class AzkabanExecutorServer {
               props.getInt(METRIC_INTERVAL + "default"))));
 
       logger.info("Adding number of queued flows metric");
-
       metricManager.addMetric(new NumQueuedFlowMetric(runnerManager,
           metricManager, props.getInt(METRIC_INTERVAL
               + NumQueuedFlowMetric.NUM_QUEUED_FLOW_METRIC_NAME,
@@ -230,8 +229,6 @@ public class AzkabanExecutorServer {
       metricManager.addMetric(new JobDurationMetric(metricManager));
 
       logger.info("Completed configuring Metric Reports");
-
-
     }
 
   }

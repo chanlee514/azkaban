@@ -222,6 +222,7 @@ public class FlowRunner extends EventHandler implements Runnable {
             logger.info("Setting end time for flow " + execId + " to "
                     + System.currentTimeMillis());
 
+
             updateFlow();
             this.fireEventListeners(Event.create(this, Type.FLOW_FINISHED));
             closeLogger();

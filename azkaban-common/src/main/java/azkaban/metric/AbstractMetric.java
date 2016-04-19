@@ -19,9 +19,7 @@ package azkaban.metric;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-
 /**
  * Abstract class for Metric
  * @param <T> Type of Value of a given metric

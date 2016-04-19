@@ -17,7 +17,6 @@
 package azkaban.metric;
 
 import java.util.List;
-
 /**
  * Interface of any Metric
  * @param <T> Type of Value of a given metric
