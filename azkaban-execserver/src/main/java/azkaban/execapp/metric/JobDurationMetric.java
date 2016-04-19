@@ -35,6 +35,4 @@ public class JobDurationMetric extends AbstractMetric<Integer> implements EventL
             }
         }
     }
-
-
 }

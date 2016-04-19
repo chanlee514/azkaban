@@ -110,8 +110,6 @@ public class FlowRunner extends EventHandler implements Runnable {
     // The following is state that will trigger a retry of all failed jobs
     private boolean retryFailedJobs = false;
 
-
-
     /**
      * Constructor. This will create its own ExecutorService for thread pools
      *
@@ -157,6 +155,7 @@ public class FlowRunner extends EventHandler implements Runnable {
         this.finishedNodes = new SwapQueue<ExecutableNode>();
 
         this.addListener(AzkabanExecutorServer.getApp().getClusterManager());
+
     }
 
     public FlowRunner setFlowWatcher(FlowWatcher watcher) {
@@ -202,6 +201,7 @@ public class FlowRunner extends EventHandler implements Runnable {
             logger.info("Fetching job and shared properties.");
             loadAllProperties();
 
+
             this.fireEventListeners(Event.create(this, Type.FLOW_STARTED));
             runFlow();
 
@@ -225,7 +225,6 @@ public class FlowRunner extends EventHandler implements Runnable {
             updateFlow();
             this.fireEventListeners(Event.create(this, Type.FLOW_FINISHED));
             closeLogger();
-
         }
     }
 
@@ -853,8 +852,6 @@ public class FlowRunner extends EventHandler implements Runnable {
             // Adding TotalNumFlowJobsMetric Listener
             jobRunner.addListener((TotalNumFlowJobsMetric) metricManager
                     .getMetricFromName(TotalNumFlowJobsMetric.TOTAL_NUM_FLOW_JOBS_METRIC_NAME));
-
-
 
         }
 
