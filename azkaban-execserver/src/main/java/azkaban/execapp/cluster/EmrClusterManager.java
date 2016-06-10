@@ -184,9 +184,14 @@ public class EmrClusterManager implements IClusterManager, EventListener {
 
                     // This is to keep track the number of flows that's attached to an EMR cluster
                     List<Integer> execIds = clusterFlows.compute(clusterName, (k, eids) -> {
-                        if (eids == null) eids = new ArrayList<Integer>();
+                        if (eids == null) eids = Collections.emptyList();
 
-                        L
+                        // Let's not consider flows that are done already
+                        eids = eids
+                                .stream()
+                                .filter( execId -> isFlowStillRunning(execId, jobLogger))
+                                .collect(Collectors.toList());
+
                         eids.add(flow.getExecutionId());
 
                         return eids;
@@ -405,7 +410,7 @@ public class EmrClusterManager implements IClusterManager, EventListener {
             Integer count = execIds.size();
 
             // Are the other flows sharing the cluster ok to shutdown the cluster?
-            List<Integer> otherExecIds = clustersKeepAlive.compute(clusterName, (key, eids) -> {
+            List<Integer> otherExecIds = clustersKeepAlive.compute(clusterId, (key, eids) -> {
                 if (eids == null) eids = Collections.emptyList();
 
                 // Obviously we don't care about this flow because that's being taken care already
@@ -455,7 +460,11 @@ public class EmrClusterManager implements IClusterManager, EventListener {
 
                 } else if (!okForThisFlowToShutdownCluster) {
                     // If we are not shutting down the cluster now and it's not ok for the cluster to be shutdown from this specific flow's prespective, add note to that
-                    clustersKeepAlive.add(clusterId);
+                    clustersKeepAlive.compute(clusterId, (key, eids) -> {
+                       if (eids == null) Collections.emptyList();
+                        eids.add(flow.getExecutionId());
+                        return eids;
+                    });
 
                 } else if (!otherFlowsOkToShutdown) {
                     // Not ok to shutdown with some other flow that used this cluster
