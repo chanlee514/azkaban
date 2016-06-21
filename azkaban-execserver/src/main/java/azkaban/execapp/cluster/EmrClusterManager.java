@@ -194,9 +194,13 @@ public class EmrClusterManager implements IClusterManager, EventListener {
 
                         eids.add(flow.getExecutionId());
 
+                        // Return null so entry gets deleted from map
+                        if (eids.isEmpty()) return null;
+
                         return eids;
                     });
 
+                    if (execIds == null) execIds = Collections.emptyList();
                     int count = execIds.size();
                     jobLogger.info("Number of flow(s) currently using cluster " + clusterName + ": " + count);
 
@@ -316,6 +320,7 @@ public class EmrClusterManager implements IClusterManager, EventListener {
             boolean results = (f != null && !Status.isStatusFinished(f.getStatus()));
 
             if (!results) logger.info("Execution " + executionId + " doesn't seem to be running anymore (status: " + f.getStatus() + ")");
+            else logger.info("Execution " + executionId + " is still running (status: " + f.getStatus() + ")");
 
             return results;
 
@@ -537,7 +542,11 @@ public class EmrClusterManager implements IClusterManager, EventListener {
 
     private void updateFlow(ExecutableFlow flow) throws ExecutorManagerException {
         flow.setUpdateTime(System.currentTimeMillis());
+
         if (executorLoader == null) executorLoader = AzkabanExecutorServer.getApp().getExecutorLoader();
+        executorLoader.updateExecutableFlow(flow);
+
+        if (executorManager == null) executorManager = AzkabanWebServer
         executorLoader.updateExecutableFlow(flow);
     }
 
