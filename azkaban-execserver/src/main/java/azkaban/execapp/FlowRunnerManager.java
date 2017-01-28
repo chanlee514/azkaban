@@ -370,6 +370,7 @@ public class FlowRunnerManager implements EventListener,
         synchronized (executionDirDeletionSync) {
           try {
             FileUtils.deleteDirectory(exDir);
+            logger.debug("Successfully deleted directory " + exDir.getPath());
           } catch (IOException e) {
             logger.error("Error cleaning execution dir " + exDir.getPath(), e);
           }
