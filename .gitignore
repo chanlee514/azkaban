@@ -6,3 +6,4 @@ build/
 TestProcess_*
 _AzkabanTestDir_*
 reports/
+solo/
