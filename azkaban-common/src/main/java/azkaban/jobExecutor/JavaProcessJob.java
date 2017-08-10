@@ -37,14 +37,13 @@ public class JavaProcessJob extends ProcessJob {
   public static final String MAIN_ARGS = "main.args";
   public static final String JVM_PARAMS = "jvm.args";
   public static final String GLOBAL_JVM_PARAMS = "global.jvm.args";
-
   public static final String DEFAULT_INITIAL_MEMORY_SIZE = "64M";
   public static final String DEFAULT_MAX_MEMORY_SIZE = "256M";
 
   public static String JAVA_COMMAND = "java";
 
   public JavaProcessJob(String jobid, Props sysProps, Props jobProps,
-      Logger logger) {
+                        Logger logger) {
     super(jobid, sysProps, jobProps, logger);
   }
 
@@ -88,7 +87,7 @@ public class JavaProcessJob extends ProcessJob {
     // Adding global properties used system wide.
     if (getJobProps().containsKey(GLOBAL_CLASSPATH)) {
       List<String> globalClasspath =
-          getJobProps().getStringList(GLOBAL_CLASSPATH);
+              getJobProps().getStringList(GLOBAL_CLASSPATH);
       for (String global : globalClasspath) {
         getLog().info("Adding to global classpath:" + global);
         classpathList.add(global);
@@ -99,7 +98,7 @@ public class JavaProcessJob extends ProcessJob {
       File path = new File(getPath());
       // File parent = path.getParentFile();
       getLog().info(
-          "No classpath specified. Trying to load classes from " + path);
+              "No classpath specified. Trying to load classes from " + path);
 
       if (path != null) {
         for (File file : path.listFiles()) {
@@ -116,9 +115,12 @@ public class JavaProcessJob extends ProcessJob {
     return classpathList;
   }
 
+  @Override
+  public void getFiles() {}
+
   protected String getInitialMemorySize() {
     return getJobProps().getString(INITIAL_MEMORY_SIZE,
-        DEFAULT_INITIAL_MEMORY_SIZE);
+            DEFAULT_INITIAL_MEMORY_SIZE);
   }
 
   protected String getMaxMemorySize() {

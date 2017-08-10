@@ -55,6 +55,8 @@ public class ProcessJob extends AbstractProcessJob {
       "execute.as.user.override";
   public static final String USER_TO_PROXY = "user.to.proxy";
   public static final String KRB5CCNAME = "KRB5CCNAME";
+  public static final String EXTERNAL_DEPENDENCIES = "job.externalFile.url";
+  public static final String LOADER_TYPE = "job.externalFile.type";
 
   public ProcessJob(final String jobId, final Props sysProps,
       final Props jobProps, final Logger log) {
@@ -71,6 +73,13 @@ public class ProcessJob extends AbstractProcessJob {
       resolveProps();
     } catch (Exception e) {
       handleError("Bad property definition! " + e.getMessage(), e);
+    }
+
+    // Get any required files
+    try {
+      getFiles();
+    } catch (Exception e) {
+      handleError("Unable to get files for job " + e.getMessage(), e);
     }
 
     if (sysProps.getBoolean(MEMCHECK_ENABLED, true)
@@ -288,6 +297,10 @@ public class ProcessJob extends AbstractProcessJob {
 
   public String getPath() {
     return _jobPath == null ? "" : _jobPath;
+  }
+
+  public void getFiles() {
+
   }
 
   /**
