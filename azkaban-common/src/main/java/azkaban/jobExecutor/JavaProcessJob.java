@@ -116,7 +116,9 @@ public class JavaProcessJob extends ProcessJob {
   }
 
   @Override
-  public void getFiles() {}
+  public void getFiles() {
+    DependencyLoader loader = DependencyLoader.getLoader(getJobProps());
+  }
 
   protected String getInitialMemorySize() {
     return getJobProps().getString(INITIAL_MEMORY_SIZE,
