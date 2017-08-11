@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.fileupload.util.Streams;
@@ -47,6 +48,7 @@ public abstract class AbstractProcessJob extends AbstractJob {
   private static final String SENSITIVE_JOB_PROP_VALUE_PLACEHOLDER = "[MASKED]";
   private static final String JOB_DUMP_PROPERTIES_IN_LOG = "job.dump.properties";
 
+
   protected final String _jobPath;
 
   protected volatile Props jobProps;
@@ -71,6 +73,7 @@ public abstract class AbstractProcessJob extends AbstractJob {
   public Props getJobProps() {
     return jobProps;
   }
+  public String getFiles() { return ""; }
 
   public Props getSysProps() {
     return sysProps;

@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import azkaban.jobExecutor.loaders.DependencyLoader;
 import org.apache.log4j.Logger;
 
 import azkaban.flow.CommonJobProperties;
@@ -55,8 +56,11 @@ public class ProcessJob extends AbstractProcessJob {
       "execute.as.user.override";
   public static final String USER_TO_PROXY = "user.to.proxy";
   public static final String KRB5CCNAME = "KRB5CCNAME";
-  public static final String EXTERNAL_DEPENDENCIES = "job.externalFile.url";
-  public static final String LOADER_TYPE = "job.externalFile.type";
+  public static final String EXTERNAL_DEPENDENCIES_URL = "job.loader.url";
+
+  protected String externalFile;
+
+  public DependencyLoader loader;
 
   public ProcessJob(final String jobId, final Props sysProps,
       final Props jobProps, final Logger log) {
@@ -65,6 +69,16 @@ public class ProcessJob extends AbstractProcessJob {
     // this is in line with what other job types (hadoopJava, spark, pig, hive)
     // is doing
     jobProps.put(CommonJobProperties.JOB_ID, jobId);
+  }
+
+  @Override
+  public String getFiles() {
+    loader = DependencyLoader.getLoader(jobProps);
+    String url = jobProps.getString(EXTERNAL_DEPENDENCIES_URL, "");
+    if (!url.isEmpty()) {
+      return loader.getDependency(url);
+    }
+    return "";
   }
 
   @Override
@@ -77,7 +91,7 @@ public class ProcessJob extends AbstractProcessJob {
 
     // Get any required files
     try {
-      getFiles();
+      externalFile = getFiles();
     } catch (Exception e) {
       handleError("Unable to get files for job " + e.getMessage(), e);
     }
@@ -299,9 +313,7 @@ public class ProcessJob extends AbstractProcessJob {
     return _jobPath == null ? "" : _jobPath;
   }
 
-  public void getFiles() {
 
-  }
 
   /**
    * Splits the command into a unix like command line structure. Quotes and

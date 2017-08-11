@@ -161,4 +161,20 @@ public class JavaProcessJobTest {
       Assert.assertTrue(true);
     }
   }
+
+  @Test
+  public void testLoader() throws Exception {
+    props.put(JavaProcessJob.JAVA_CLASS,
+            "azkaban.jobExecutor.WordCountLocal");
+    props.put("input", errorInputFile);
+    props.put("output", outputFile);
+    props.put("classpath", classPaths);
+    props.put("job.loader.type", "s3");
+    props.put("job.loader.url", "testBucket/testFile.jar");
+    try {
+      job.run();
+    } catch (RuntimeException e) {
+      Assert.assertTrue(true);
+    }
+  }
 }

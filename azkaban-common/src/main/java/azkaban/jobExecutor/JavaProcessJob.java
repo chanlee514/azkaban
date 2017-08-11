@@ -17,6 +17,7 @@
 package azkaban.jobExecutor;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,6 +42,7 @@ public class JavaProcessJob extends ProcessJob {
   public static final String DEFAULT_MAX_MEMORY_SIZE = "256M";
 
   public static String JAVA_COMMAND = "java";
+
 
   public JavaProcessJob(String jobid, Props sysProps, Props jobProps,
                         Logger logger) {
@@ -94,6 +96,10 @@ public class JavaProcessJob extends ProcessJob {
       }
     }
 
+    if (externalFile != null) {
+      classpathList.add(new File(externalFile).getParent());
+    }
+
     if (classPaths == null) {
       File path = new File(getPath());
       // File parent = path.getParentFile();
@@ -113,11 +119,6 @@ public class JavaProcessJob extends ProcessJob {
     }
 
     return classpathList;
-  }
-
-  @Override
-  public void getFiles() {
-    DependencyLoader loader = DependencyLoader.getLoader(getJobProps());
   }
 
   protected String getInitialMemorySize() {
