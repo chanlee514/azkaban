@@ -3,6 +3,7 @@ dist
 testJM
 bin/
 build/
+*.class
 .gradle/
 .settings/
 .idea/
