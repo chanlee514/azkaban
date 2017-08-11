@@ -21,6 +21,9 @@ import java.io.File;
 import java.util.Date;
 import java.util.Properties;
 
+import azkaban.jobExecutor.loaders.DependencyLoader;
+import azkaban.jobExecutor.loaders.RemoteDependencyLoader;
+import azkaban.jobExecutor.loaders.utils.TestFileDownloader;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -171,6 +174,11 @@ public class JavaProcessJobTest {
     props.put("classpath", classPaths);
     props.put("job.loader.type", "s3");
     props.put("job.loader.url", "testBucket/testFile.jar");
+    props.put(DependencyLoader.UNIQUE_FILE_DOWNLOAD, "true");
+    RemoteDependencyLoader remoteLoader = new RemoteDependencyLoader(props);
+    remoteLoader.setDownloader(new TestFileDownloader());
+    job.setLoader(remoteLoader);
+
     try {
       job.run();
     } catch (RuntimeException e) {

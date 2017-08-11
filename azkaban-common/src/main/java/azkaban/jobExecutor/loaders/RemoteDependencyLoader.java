@@ -15,15 +15,15 @@ public class RemoteDependencyLoader extends DependencyLoader {
   private transient static Logger logger = Logger.getLogger(RemoteDependencyLoader.class);
   private boolean unique;
   private String targetDirectory;
-  private FileDownloader downloader;
+  protected FileDownloader downloader;
+
+  public void setDownloader(FileDownloader downloader) {
+    this.downloader = downloader;
+  }
 
   public RemoteDependencyLoader(Props props) {
     unique = props.getBoolean(UNIQUE_FILE_DOWNLOAD, false);
     targetDirectory = getTempDirectory(props);
-  }
-
-  public void setDownloader(FileDownloader downloader) {
-    this.downloader = downloader;
   }
 
   public String getFile(String path, String destination, boolean unique) throws IOException {

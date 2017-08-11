@@ -71,9 +71,19 @@ public class ProcessJob extends AbstractProcessJob {
     jobProps.put(CommonJobProperties.JOB_ID, jobId);
   }
 
+  public void setLoader(DependencyLoader loader) {
+    this.loader = loader;
+  }
+
+  public DependencyLoader getLoader() {
+    return loader;
+  }
+
   @Override
   public String getFiles() {
-    loader = DependencyLoader.getLoader(jobProps);
+    if (loader == null) {
+      loader = DependencyLoader.getLoader(jobProps);
+    }
     String url = jobProps.getString(EXTERNAL_DEPENDENCIES_URL, "");
     if (!url.isEmpty()) {
       return loader.getDependency(url);

@@ -1,5 +1,7 @@
 package azkaban.jobExecutor.loaders;
 
+import azkaban.jobExecutor.loaders.utils.FileDownloader;
+import azkaban.jobExecutor.loaders.utils.S3FileDownloader;
 import azkaban.utils.Props;
 
 import java.io.File;
@@ -11,11 +13,9 @@ public abstract class DependencyLoader {
   public static final String LOADER_TYPE = "job.loader.type";
   public static final String TMP_DIR = "/tmp";
   public static final String JOB_ID = "azkaban.job.id";
-  protected final String UNIQUE_FILE_DOWNLOAD = "job.loader.uniqueFilename";
+  public static final String UNIQUE_FILE_DOWNLOAD = "job.loader.uniqueFilename";
 
-  public String getDependency(String url) {
-    return "";
-  }
+  public abstract String getDependency(String url);
 
   public static String getTempDirectory(Props props) {
     String jobId = props.getString(JOB_ID);
@@ -30,8 +30,13 @@ public abstract class DependencyLoader {
 
   public static DependencyLoader getLoader(Props props) {
     String loaderType = props.getString(LOADER_TYPE, "");
+    RemoteDependencyLoader loader = new RemoteDependencyLoader(props);
     switch (loaderType) {
-      case "s3": return new RemoteDependencyLoader(props);
+      case "s3": {
+        S3FileDownloader downloader = new S3FileDownloader();
+        loader.setDownloader(downloader);
+        return loader;
+      }
       // case "artifactory": return new ArtifactoryLoader(props);
       default: return new LocalLoader(props);
     }

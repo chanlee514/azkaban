@@ -96,10 +96,6 @@ public class JavaProcessJob extends ProcessJob {
       }
     }
 
-    if (externalFile != null) {
-      classpathList.add(new File(externalFile).getParent());
-    }
-
     if (classPaths == null) {
       File path = new File(getPath());
       // File parent = path.getParentFile();
@@ -116,6 +112,10 @@ public class JavaProcessJob extends ProcessJob {
       }
     } else {
       classpathList.addAll(classPaths);
+    }
+
+    if (externalFile != null) {
+      classpathList.add(new File(externalFile).getParent());
     }
 
     return classpathList;
