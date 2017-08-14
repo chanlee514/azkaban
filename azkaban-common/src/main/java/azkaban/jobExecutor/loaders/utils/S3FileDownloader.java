@@ -38,7 +38,7 @@ public class S3FileDownloader implements FileDownloader {
     Configuration hadoopConfigs = new Configuration();
 
     if (jobProps.containsKey(HADOOP_INJECT_MASTER_IP)) {
-      hadoopConfigs.set("hadoop.master.ip", jobProps.getString(HADOOP_INJECT_MASTER_IP));
+      hadoopConfigs.set(HADOOP_MASTER_IP, jobProps.getString(HADOOP_INJECT_MASTER_IP));
       throw new RuntimeException("Unable to instantiate S3FileDownloader");
     }
     return hadoopConfigs;
