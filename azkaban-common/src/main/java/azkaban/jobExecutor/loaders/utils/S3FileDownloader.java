@@ -31,7 +31,11 @@ public class S3FileDownloader implements FileDownloader {
   }
 
   /**
-   * Set up hadoop configs for hadoopclient
+   * Configure Hadoop endpoints and S3 access
+   *
+   * @param sysProps System properties from job
+   * @param jobProps Job properties from job
+   * @throws IOException
    */
   protected void setHadoopConfigs(Props sysProps, Props jobProps) throws IOException {
     ArrayList<URL> resources = new ArrayList();

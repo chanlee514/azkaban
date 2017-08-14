@@ -13,12 +13,16 @@ public abstract class DependencyLoader {
   public static final String JOB_ID = "azkaban.job.id";
   public static final String UNIQUE_FILE_DOWNLOAD = "job.loader.uniqueFilename";
 
+  /**
+   * Download all dependencies
+   * @return a list of paths
+   */
   public abstract List<String> getDependencies();
 
   /**
    * Get a job dependency directory for this process
    * @param props Job properties
-   * @return
+   * @return A path as a string
    */
   public static String getTempDirectory(Props props) {
     String jobId = props.getString(JOB_ID);

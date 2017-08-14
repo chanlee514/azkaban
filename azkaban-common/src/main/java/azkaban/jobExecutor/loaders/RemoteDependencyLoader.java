@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
 /**
  * Currently the only implementation of DependencyLoader, downloads remote files
  * downloaders set to handle different protocols.
@@ -102,6 +103,7 @@ public class RemoteDependencyLoader extends DependencyLoader {
       if (!localFile.exists()) {
         return downloaders.get(protocol).download(path, localPath);
       }
+
       return localPath;
     } catch (Exception e) {
       logger.error("Unable to download " + url + " from remote location, saw error \n", e);
