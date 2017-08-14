@@ -45,13 +45,12 @@ public class RemoteDependencyLoader extends DependencyLoader {
 
   /**
    * @param jobProps Azkaban job properties
-   * @param sysProps Sys props for some things like Hadoop
+   *
    */
-  public RemoteDependencyLoader(Props sysProps, Props jobProps) {
+  public RemoteDependencyLoader(Props jobProps) {
     loaderUrls = jobProps.getStringList(ProcessJob.EXTERNAL_DEPENDENCIES_URLS, ",");
     unique = jobProps.getBoolean(UNIQUE_FILE_DOWNLOAD, false);
     targetDirectory = getTempDirectory(jobProps);
-    sysProps = sysProps;
     jobProps = jobProps;
   }
 
@@ -65,7 +64,7 @@ public class RemoteDependencyLoader extends DependencyLoader {
   protected FileDownloader defaultDownloader(String protocol) {
     switch (protocol) {
       case "s3":
-        return new S3FileDownloader(sysProps, jobProps);
+        return new S3FileDownloader(jobProps);
       default:
         throw new RuntimeException("Protocol unknown: " + protocol);
     }

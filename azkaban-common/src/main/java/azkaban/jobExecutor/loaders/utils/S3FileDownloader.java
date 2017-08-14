@@ -9,8 +9,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.ArrayList;
 
 
 public class S3FileDownloader implements FileDownloader {
@@ -22,9 +20,9 @@ public class S3FileDownloader implements FileDownloader {
 
   protected Configuration conf;
 
-  public S3FileDownloader(Props sysProps, Props jobProps) {
+  public S3FileDownloader(Props jobProps) {
     try {
-      setHadoopConfigs(sysProps, jobProps);
+      conf = getHadoopConfigs(jobProps);
     } catch (IOException e) {
       logger.error("Invalid configuration for S3 Downloader: ", e);
     }
@@ -33,20 +31,17 @@ public class S3FileDownloader implements FileDownloader {
   /**
    * Configure Hadoop endpoints and S3 access
    *
-   * @param sysProps System properties from job
    * @param jobProps Job properties from job
    * @throws IOException
    */
-  protected void setHadoopConfigs(Props sysProps, Props jobProps) throws IOException {
-    ArrayList<URL> resources = new ArrayList();
-    resources.add((new File(sysProps.get(HADOOP_CONF_DIR_PROP))).toURI().toURL());
-
-    conf = new Configuration();
+  protected Configuration getHadoopConfigs(Props jobProps) throws IOException {
+    Configuration hadoopConfigs = new Configuration();
 
     if (jobProps.containsKey(HADOOP_INJECT_MASTER_IP)) {
-      conf.set("hadoop.master.ip", jobProps.getString(HADOOP_INJECT_MASTER_IP));
+      hadoopConfigs.set("hadoop.master.ip", jobProps.getString(HADOOP_INJECT_MASTER_IP));
       throw new RuntimeException("Unable to instantiate S3FileDownloader");
     }
+    return hadoopConfigs;
   }
 
   /**
