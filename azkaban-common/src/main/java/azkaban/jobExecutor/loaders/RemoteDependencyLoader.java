@@ -1,6 +1,8 @@
 package azkaban.jobExecutor.loaders;
 
+import azkaban.jobExecutor.ProcessJob;
 import azkaban.jobExecutor.loaders.utils.FileDownloader;
+import azkaban.jobExecutor.loaders.utils.S3FileDownloader;
 import azkaban.utils.Props;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.log4j.Logger;
@@ -8,26 +10,68 @@ import org.apache.log4j.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-
+/**
+ * Currently the only implementation of DependencyLoader, downloads remote files
+ * downloaders set to handle different protocols.
+ */
 public class RemoteDependencyLoader extends DependencyLoader {
 
   private transient static Logger logger = Logger.getLogger(RemoteDependencyLoader.class);
   private boolean unique;
   private String targetDirectory;
-  protected FileDownloader downloader;
+  protected List<String> loaderUrls;
+  protected Map<String, FileDownloader> downloaders = new HashMap();
 
-  public void setDownloader(FileDownloader downloader) {
-    this.downloader = downloader;
+  protected static final String PROTOCOL_SEP = "://";
+
+  /**
+   * Set a downloader for a particular protocol prefix
+   * @param protocol The protocol (such as s3)
+   * @param downloader a FileDownloader capable of handling protocol in question
+   */
+  public void setDownloader(String protocol, FileDownloader downloader) {
+    this.downloaders.put(protocol, downloader);
   }
 
+  /**
+   * @param props Azkaban process properties
+   */
   public RemoteDependencyLoader(Props props) {
+    loaderUrls = props.getStringList(ProcessJob.EXTERNAL_DEPENDENCIES_URLS, ",");
+    for (String url: loaderUrls) {
+      String protocol = url.split(PROTOCOL_SEP)[0];
+      if (!downloaders.containsKey(protocol)) {
+        switch(protocol) {
+          case "s3":
+            setDownloader(protocol, new S3FileDownloader());
+            break;
+          default:
+            throw new RuntimeException("Protocol unknown: " + protocol);
+        }
+      }
+    }
     unique = props.getBoolean(UNIQUE_FILE_DOWNLOAD, false);
     targetDirectory = getTempDirectory(props);
   }
 
-  public String getFile(String path, String destination, boolean unique) throws IOException {
+  /**
+   * Get a file at a remote location
+   * @param url the url to be retrieved
+   * @param destination local destination dir
+   * @param unique uniquify local download with UUID
+   * @return local path of file downloaded
+   * @throws IOException
+   */
+  public String getFile(String url, String destination, boolean unique) throws IOException {
     try {
+      String[] protocolAndPath = url.split(PROTOCOL_SEP);
+      String protocol = protocolAndPath[0];
+      String path = protocolAndPath[1];
       File remoteFile = new File(path);
       String filename = remoteFile.getName();
 
@@ -40,31 +84,39 @@ public class RemoteDependencyLoader extends DependencyLoader {
       File localFile = new File(localPath);
 
       if (!localFile.exists()) {
-        return downloader.download(path, localPath);
+        return downloaders.get(protocol).download(path, localPath);
       }
       return localPath;
     } catch (Exception e) {
-      logger.error("Unable to download " + path + " from remote location, saw error \n", e);
-      throw new IOException("File download failed for " + path);
+      logger.error("Unable to download " + url + " from remote location, saw error \n", e);
+      throw new IOException("File download failed for " + url);
     }
   }
 
+
   /**
-   * Get the dependency
-   * @param url Must be some sort of url - s3, artifactory, who cares
-   * @return
+   * Get all required dependencies for this job
+   * @param urls The list of urls to download
+   * @return paths of files on local FS
+   */
+  public List<String> getDependencies(List<String> urls) {
+    List<String> downloadedFiles = new ArrayList();
+    for(String url: urls) {
+      try {
+        downloadedFiles.add(getFile(url, targetDirectory, unique));
+      } catch (IOException e) {
+        logger.error("Exception loading dependency: ", e);
+        throw new RuntimeException("Unable to locate dependencies.");
+      }
+    }
+    return downloadedFiles;
+  }
+
+  /**
+   * Get the dependencies defined in properties
+   * @return a list of files downloaded
    */
   @Override
-  public String getDependency(String url) {
-    try {
-      if (this.downloader == null) {
-        throw new RuntimeException("No downloader set");
-      }
-      return getFile(url, targetDirectory, unique);
-    } catch (IOException e) {
-      logger.error("Exception loading dependency: ", e);
-      throw new RuntimeException("Unable to locate dependencies.");
-    }
-  }
+  public List<String> getDependencies() { return getDependencies(loaderUrls); }
 
 }

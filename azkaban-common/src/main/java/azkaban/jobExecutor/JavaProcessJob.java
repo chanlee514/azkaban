@@ -17,10 +17,10 @@
 package azkaban.jobExecutor;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import azkaban.jobExecutor.loaders.DependencyLoader;
 import org.apache.log4j.Logger;
 
 import azkaban.project.DirectoryFlowLoader;
@@ -114,10 +114,10 @@ public class JavaProcessJob extends ProcessJob {
       classpathList.addAll(classPaths);
     }
 
-    if (externalFile != null) {
-      classpathList.add(new File(externalFile).getParent());
+    // Add external files to classpath
+    if(externalFiles.size() > 0) {
+      classpathList.add(DependencyLoader.getTempDirectory(jobProps));
     }
-
     return classpathList;
   }
 

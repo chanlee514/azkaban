@@ -173,15 +173,16 @@ public class JavaProcessJobTest {
     props.put("output", outputFile);
     props.put("classpath", classPaths);
     props.put("job.loader.type", "s3");
-    props.put("job.loader.url", "testBucket/testFile.jar");
+    props.put("job.loader.urls", "s3://testBucket/testFile.jar,s3://someThing.jar");
     props.put(DependencyLoader.UNIQUE_FILE_DOWNLOAD, "true");
     RemoteDependencyLoader remoteLoader = new RemoteDependencyLoader(props);
-    remoteLoader.setDownloader(new TestFileDownloader());
+    remoteLoader.setDownloader("s3", new TestFileDownloader());
     job.setLoader(remoteLoader);
 
     try {
       job.run();
     } catch (RuntimeException e) {
+      Assert.assertEquals(job.externalFiles.size(), 2);
       Assert.assertTrue(true);
     }
   }

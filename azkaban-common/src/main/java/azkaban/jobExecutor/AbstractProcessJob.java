@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -73,7 +74,7 @@ public abstract class AbstractProcessJob extends AbstractJob {
   public Props getJobProps() {
     return jobProps;
   }
-  public String getFiles() { return ""; }
+  public List<String> getFiles() { return new ArrayList(); }
 
   public Props getSysProps() {
     return sysProps;
