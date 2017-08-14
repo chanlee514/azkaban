@@ -66,7 +66,7 @@ public class S3FileDownloader implements FileDownloader {
         logger.info("Specified from s3: " + url);
         logger.info("Downloading file to " + localPath);
         Path s3Path = new Path("s3a://" + jarURI.getHost() + jarURI.getPath());
-        FileSystem s3Fs = s3Path.getFileSystem(new Configuration());
+        FileSystem s3Fs = s3Path.getFileSystem(conf);
         s3Fs.copyToLocalFile(s3Path, new Path(localPath));
         return localPath;
       } else {
