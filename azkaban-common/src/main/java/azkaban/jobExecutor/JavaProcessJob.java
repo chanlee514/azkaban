@@ -61,7 +61,7 @@ public class JavaProcessJob extends ProcessJob {
     command += getJVMArguments() + " ";
     command += "-Xms" + getInitialMemorySize() + " ";
     command += "-Xmx" + getMaxMemorySize() + " ";
-    command += "-cp " + createArguments(getClassPaths(), ":") + " ";
+    command += "-cp " + "'" + createArguments(getClassPaths(), ":") + "' ";
     command += getJavaClass() + " ";
     command += getMainArguments();
 
@@ -116,7 +116,7 @@ public class JavaProcessJob extends ProcessJob {
 
     // Add external files to classpath
     if(externalFiles.size() > 0) {
-      classpathList.add(DependencyLoader.getTempDirectory(jobProps));
+      classpathList.add(DependencyLoader.getTempDirectory(jobProps) + "/*");
     }
     return classpathList;
   }
@@ -148,7 +148,7 @@ public class JavaProcessJob extends ProcessJob {
     if (arguments != null && arguments.size() > 0) {
       String param = "";
       for (String arg : arguments) {
-        param += arg + separator;
+        param += arg.replace("'","") + separator;
       }
 
       return param.substring(0, param.length() - 1);

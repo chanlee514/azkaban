@@ -39,7 +39,7 @@ public class RemoteDependencyLoader extends DependencyLoader {
   }
 
   /**
-   * @param props Azkaban process properties
+   * @param props Azkaban job properties
    */
   public RemoteDependencyLoader(Props props) {
     loaderUrls = props.getStringList(ProcessJob.EXTERNAL_DEPENDENCIES_URLS, ",");
@@ -92,7 +92,6 @@ public class RemoteDependencyLoader extends DependencyLoader {
       throw new IOException("File download failed for " + url);
     }
   }
-
 
   /**
    * Get all required dependencies for this job
