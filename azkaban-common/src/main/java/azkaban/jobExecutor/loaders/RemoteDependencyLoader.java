@@ -27,11 +27,15 @@ public class RemoteDependencyLoader extends DependencyLoader {
   protected List<String> loaderUrls;
   protected Map<String, FileDownloader> downloaders = new HashMap();
 
+  protected Props sysProps;
+  protected Props jobProps;
+
   protected static final String PROTOCOL_SEP = "://";
 
   /**
    * Set a downloader for a particular protocol prefix
-   * @param protocol The protocol (such as s3)
+   *
+   * @param protocol   The protocol (such as s3)
    * @param downloader a FileDownloader capable of handling protocol in question
    */
   public void setDownloader(String protocol, FileDownloader downloader) {
@@ -39,31 +43,39 @@ public class RemoteDependencyLoader extends DependencyLoader {
   }
 
   /**
-   * @param props Azkaban job properties
+   * @param jobProps Azkaban job properties
+   * @param sysProps Sys props for some things like Hadoop
    */
-  public RemoteDependencyLoader(Props props) {
-    loaderUrls = props.getStringList(ProcessJob.EXTERNAL_DEPENDENCIES_URLS, ",");
-    for (String url: loaderUrls) {
-      String protocol = url.split(PROTOCOL_SEP)[0];
-      if (!downloaders.containsKey(protocol)) {
-        switch(protocol) {
-          case "s3":
-            setDownloader(protocol, new S3FileDownloader());
-            break;
-          default:
-            throw new RuntimeException("Protocol unknown: " + protocol);
-        }
-      }
+  public RemoteDependencyLoader(Props sysProps, Props jobProps) {
+    loaderUrls = jobProps.getStringList(ProcessJob.EXTERNAL_DEPENDENCIES_URLS, ",");
+    unique = jobProps.getBoolean(UNIQUE_FILE_DOWNLOAD, false);
+    targetDirectory = getTempDirectory(jobProps);
+    sysProps = sysProps;
+    jobProps = jobProps;
+  }
+
+  /**
+   * Get the default downloader for the protocol. It's not super hot that this is
+   * hardcoded here. Handling this here allows for injection for testing.
+   *
+   * @param protocol
+   * @return A downloader for this file type
+   */
+  protected FileDownloader defaultDownloader(String protocol) {
+    switch (protocol) {
+      case "s3":
+        return new S3FileDownloader(sysProps, jobProps);
+      default:
+        throw new RuntimeException("Protocol unknown: " + protocol);
     }
-    unique = props.getBoolean(UNIQUE_FILE_DOWNLOAD, false);
-    targetDirectory = getTempDirectory(props);
   }
 
   /**
    * Get a file at a remote location
-   * @param url the url to be retrieved
+   *
+   * @param url         the url to be retrieved
    * @param destination local destination dir
-   * @param unique uniquify local download with UUID
+   * @param unique      uniquify local download with UUID
    * @return local path of file downloaded
    * @throws IOException
    */
@@ -83,6 +95,10 @@ public class RemoteDependencyLoader extends DependencyLoader {
       String localPath = Paths.get(destination, filename).toAbsolutePath().toString(); // new location on local
       File localFile = new File(localPath);
 
+      if (!downloaders.containsKey(protocol)) {
+        setDownloader(protocol, defaultDownloader(protocol));
+      }
+
       if (!localFile.exists()) {
         return downloaders.get(protocol).download(path, localPath);
       }
@@ -95,12 +111,13 @@ public class RemoteDependencyLoader extends DependencyLoader {
 
   /**
    * Get all required dependencies for this job
+   *
    * @param urls The list of urls to download
    * @return paths of files on local FS
    */
   public List<String> getDependencies(List<String> urls) {
     List<String> downloadedFiles = new ArrayList();
-    for(String url: urls) {
+    for (String url : urls) {
       try {
         downloadedFiles.add(getFile(url, targetDirectory, unique));
       } catch (IOException e) {
@@ -113,9 +130,12 @@ public class RemoteDependencyLoader extends DependencyLoader {
 
   /**
    * Get the dependencies defined in properties
+   *
    * @return a list of files downloaded
    */
   @Override
-  public List<String> getDependencies() { return getDependencies(loaderUrls); }
+  public List<String> getDependencies() {
+    return getDependencies(loaderUrls);
+  }
 
 }

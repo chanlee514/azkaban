@@ -175,7 +175,7 @@ public class JavaProcessJobTest {
     props.put("job.loader.type", "s3");
     props.put("job.loader.urls", "s3://testBucket/testFile.jar,s3://someThing.jar");
     props.put(DependencyLoader.UNIQUE_FILE_DOWNLOAD, "true");
-    RemoteDependencyLoader remoteLoader = new RemoteDependencyLoader(props);
+    RemoteDependencyLoader remoteLoader = new RemoteDependencyLoader(props, props);
     remoteLoader.setDownloader("s3", new TestFileDownloader());
     job.setLoader(remoteLoader);
 

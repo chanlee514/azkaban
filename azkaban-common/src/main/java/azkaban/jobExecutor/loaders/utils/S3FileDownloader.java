@@ -1,5 +1,6 @@
 package azkaban.jobExecutor.loaders.utils;
 
+import azkaban.utils.Props;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -8,10 +9,41 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.ArrayList;
+
 
 public class S3FileDownloader implements FileDownloader {
 
+  public static final String HADOOP_CONF_DIR_PROP = "hadoop.conf.dir"; // hadoop dir with xml conf files. from azkaban private.props
+  public static final String HADOOP_INJECT_MASTER_IP = "hadoop-inject." + "hadoop.master.ip";
+
   private transient static org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(S3FileDownloader.class);
+
+  protected Configuration conf;
+
+  public S3FileDownloader(Props sysProps, Props jobProps) {
+    try {
+      setHadoopConfigs(sysProps, jobProps);
+    } catch (IOException e) {
+      logger.error("Invalid configuration for S3 Downloader: ", e);
+    }
+  }
+
+  /**
+   * Set up hadoop configs for hadoopclient
+   */
+  protected void setHadoopConfigs(Props sysProps, Props jobProps) throws IOException {
+    ArrayList<URL> resources = new ArrayList();
+    resources.add((new File(sysProps.get(HADOOP_CONF_DIR_PROP))).toURI().toURL());
+
+    conf = new Configuration();
+
+    if (jobProps.containsKey(HADOOP_INJECT_MASTER_IP)) {
+      conf.set("hadoop.master.ip", jobProps.getString(HADOOP_INJECT_MASTER_IP));
+      throw new RuntimeException("Unable to instantiate S3FileDownloader");
+    }
+  }
 
   /**
    * Download a s3 file to local disk
