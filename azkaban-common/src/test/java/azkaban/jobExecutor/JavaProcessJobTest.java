@@ -166,7 +166,8 @@ public class JavaProcessJobTest {
   }
 
   @Test
-  public void testLoader() throws Exception {
+  public void testLoaderAddsClassPaths() throws Exception {
+    //
     props.put(JavaProcessJob.JAVA_CLASS,
             "azkaban.jobExecutor.WordCountLocal");
     props.put("input", errorInputFile);
@@ -174,16 +175,20 @@ public class JavaProcessJobTest {
     props.put("classpath", classPaths);
     props.put("job.loader.type", "s3");
     props.put("job.loader.urls", "s3://testBucket/testFile.jar,s3://someThing.jar");
-    props.put(DependencyLoader.UNIQUE_FILE_DOWNLOAD, "true");
+    props.put(DependencyLoader.UNIQUE_FILE_DOWNLOAD, "false");
     RemoteDependencyLoader remoteLoader = new RemoteDependencyLoader(props);
     remoteLoader.setDownloader("s3", new TestFileDownloader());
     job.setLoader(remoteLoader);
 
     try {
       job.run();
-    } catch (RuntimeException e) {
       Assert.assertEquals(job.externalFiles.size(), 2);
+      Assert.assertTrue(job.getClassPaths().get(1).contains(DependencyLoader.getTempDirectory(props)));
+      Assert.assertTrue(job.externalFiles.contains(DependencyLoader.getTempDirectory(props) + "/someThing.jar"));
+      Assert.assertTrue(job.externalFiles.contains(DependencyLoader.getTempDirectory(props) + "/testFile.jar"));
       Assert.assertTrue(true);
+    } catch (RuntimeException e) {
+
     }
   }
 }
