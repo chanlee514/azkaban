@@ -51,9 +51,6 @@ public class S3FileDownloader implements FileDownloader {
    * @param localPath local target
    */
   public String download(String url, String localPath) throws IOException {
-    File remoteFile = new File(url);
-    String filename = remoteFile.getName();
-
     try {
       URI jarURI = new URI(url);
       if (jarURI.getScheme() != null) { // location is a s3 path
