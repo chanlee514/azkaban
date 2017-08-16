@@ -167,7 +167,6 @@ public class JavaProcessJobTest {
 
   @Test
   public void testLoaderAddsClassPaths() throws Exception {
-    //
     props.put(JavaProcessJob.JAVA_CLASS,
             "azkaban.jobExecutor.WordCountLocal");
     props.put("input", errorInputFile);
@@ -183,12 +182,10 @@ public class JavaProcessJobTest {
     try {
       job.run();
       Assert.assertEquals(job.externalFiles.size(), 2);
-      Assert.assertTrue(job.getClassPaths().get(1).contains(DependencyLoader.getTempDirectory(props)));
-      Assert.assertTrue(job.externalFiles.contains(DependencyLoader.getTempDirectory(props) + "/someThing.jar"));
-      Assert.assertTrue(job.externalFiles.contains(DependencyLoader.getTempDirectory(props) + "/testFile.jar"));
-      Assert.assertTrue(true);
-    } catch (RuntimeException e) {
-
-    }
+      String tmpDir = DependencyLoader.getTempDirectory(props);
+      Assert.assertTrue(job.getClassPaths().get(1).contains(tmpDir));
+      Assert.assertTrue(job.externalFiles.contains(tmpDir + "/someThing.jar"));
+      Assert.assertTrue(job.externalFiles.contains(tmpDir + "/testFile.jar"));
+    } catch (RuntimeException e) {}
   }
 }
