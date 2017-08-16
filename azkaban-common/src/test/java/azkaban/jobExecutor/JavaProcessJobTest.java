@@ -20,9 +20,12 @@ import java.io.IOException;
 import java.io.File;
 import java.util.Date;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import azkaban.jobExecutor.loaders.DependencyLoader;
 import azkaban.jobExecutor.loaders.RemoteDependencyLoader;
+import azkaban.jobExecutor.loaders.utils.S3FileDownloader;
 import azkaban.jobExecutor.loaders.utils.TestFileDownloader;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -167,25 +170,41 @@ public class JavaProcessJobTest {
 
   @Test
   public void testLoaderAddsClassPaths() throws Exception {
+    File localFile = classTemp.newFile("someLocalFile1.jar");
+    localFile.createNewFile();
     props.put(JavaProcessJob.JAVA_CLASS,
             "azkaban.jobExecutor.WordCountLocal");
     props.put("input", errorInputFile);
     props.put("output", outputFile);
     props.put("classpath", classPaths);
-    props.put("job.loader.type", "s3");
-    props.put("job.loader.urls", "s3://testBucket/testFile.jar,s3://someThing.jar");
+    props.put(ProcessJob.EXTERNAL_DEPENDENCIES_URLS, "s3://blah/someThing.jar,s3://blah/testFile.jar," + localFile.getAbsolutePath());
     props.put(DependencyLoader.UNIQUE_FILE_DOWNLOAD, "false");
-    RemoteDependencyLoader remoteLoader = new RemoteDependencyLoader(props);
+    RemoteDependencyLoader remoteLoader = new RemoteDependencyLoader(props, ProcessJob.EXTERNAL_DEPENDENCIES_URLS);
     remoteLoader.setDownloader("s3", new TestFileDownloader());
     job.setLoader(remoteLoader);
 
-    try {
-      job.run();
-      Assert.assertEquals(job.externalFiles.size(), 2);
-      String tmpDir = DependencyLoader.getTempDirectory(props);
-      Assert.assertTrue(job.getClassPaths().get(1).contains(tmpDir));
-      Assert.assertTrue(job.externalFiles.contains(tmpDir + "/someThing.jar"));
-      Assert.assertTrue(job.externalFiles.contains(tmpDir + "/testFile.jar"));
-    } catch (RuntimeException e) {}
+    job.run();
+    Assert.assertEquals(job.externalFiles.size(), 3);
+    String tmpDir = DependencyLoader.getTempDirectory(props);
+    Assert.assertTrue(job.getClassPaths().get(1).contains(tmpDir));
+    Assert.assertTrue(job.externalFiles.contains(tmpDir + "/someThing.jar"));
+    Assert.assertTrue(job.externalFiles.contains(tmpDir + "/testFile.jar"));
+    Assert.assertTrue(job.externalFiles.contains(tmpDir + "/someLocalFile1.jar"));
+
+    // Make sure command line is built properly
+    Pattern classPathPattern = Pattern.compile("(\\-cp\\W)('.*')");
+    Matcher classPathMatcher = classPathPattern.matcher(job.createCommandLine());
+    Assert.assertTrue(classPathMatcher.find());
+    String classPath = classPathMatcher.group(2);
+    Assert.assertTrue(classPath.startsWith("'"));
+    Assert.assertTrue(classPath.endsWith("'"));
   }
+
+  @Test
+  public void testDownloaderCanFindS3Files() throws Exception {
+    props.put("hadoop.master.ip", "10.36.75.138");
+    S3FileDownloader downloader = new S3FileDownloader(props);
+    downloader.download("s3://usw2-polaris-artifacts-dev/x/com.salesforce/utils_2.11/0.20.1/8e20529dd9bed0934f97a469959d0d8e326dbd19/utils_2.11-0.20.1.jar,s3://usw2-polaris-artifacts-dev/x/com.salesforce/koalavro/0.2.35/937e6f60077c3840efcfa059bc5c6c429878359c/koalavro-0.2.35.jar", "/tmp/localDownload.jar");
+  }
+
 }

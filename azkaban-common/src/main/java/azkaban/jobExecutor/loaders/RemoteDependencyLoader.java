@@ -2,6 +2,7 @@ package azkaban.jobExecutor.loaders;
 
 import azkaban.jobExecutor.ProcessJob;
 import azkaban.jobExecutor.loaders.utils.FileDownloader;
+import azkaban.jobExecutor.loaders.utils.LocalFileDownloader;
 import azkaban.jobExecutor.loaders.utils.S3FileDownloader;
 import azkaban.utils.Props;
 import org.apache.commons.io.FilenameUtils;
@@ -47,11 +48,10 @@ public class RemoteDependencyLoader extends DependencyLoader {
    * @param jobProps Azkaban job properties
    *
    */
-  public RemoteDependencyLoader(Props jobProps) {
-    loaderUrls = jobProps.getStringList(ProcessJob.EXTERNAL_DEPENDENCIES_URLS, ",");
+  public RemoteDependencyLoader(Props jobProps, String urls) {
+    loaderUrls = jobProps.getStringList(urls, ",");
     unique = jobProps.getBoolean(UNIQUE_FILE_DOWNLOAD, false);
     targetDirectory = getTempDirectory(jobProps);
-    jobProps = jobProps;
   }
 
   /**
@@ -65,6 +65,10 @@ public class RemoteDependencyLoader extends DependencyLoader {
     switch (protocol) {
       case "s3":
         return new S3FileDownloader(jobProps);
+      case "s3a":
+        return new S3FileDownloader(jobProps);
+      case "local":
+        return new LocalFileDownloader();
       default:
         throw new RuntimeException("Protocol unknown: " + protocol);
     }
@@ -82,8 +86,16 @@ public class RemoteDependencyLoader extends DependencyLoader {
   public String getFile(String url, String destination, boolean unique) throws IOException {
     try {
       String[] protocolAndPath = url.split(PROTOCOL_SEP);
-      String protocol = protocolAndPath[0];
-      String path = protocolAndPath[1];
+      String protocol;
+      String path;
+      if(protocolAndPath.length < 2){
+        protocol = "local";
+        path = url;
+      } else {
+        protocol = protocolAndPath[0];
+        path = protocolAndPath[1];
+      }
+
       File remoteFile = new File(path);
       String filename = remoteFile.getName();
 

@@ -10,7 +10,6 @@ import java.util.List;
 public abstract class DependencyLoader {
 
   public static final String TMP_DIR = "/tmp";
-  public static final String JOB_ID = "azkaban.job.id";
   public static final String UNIQUE_FILE_DOWNLOAD = "job.loader.uniqueFilename";
 
   /**
@@ -25,8 +24,7 @@ public abstract class DependencyLoader {
    * @return A path as a string
    */
   public static String getTempDirectory(Props props) {
-    String jobId = props.getString(JOB_ID);
-    Path tempDirPath = Paths.get(TMP_DIR, jobId);
+    Path tempDirPath = Paths.get(TMP_DIR, "cachedJars");
     File tempDir = new File(tempDirPath.toString());
     if (!tempDir.exists()) {
       boolean successful = tempDir.mkdirs();

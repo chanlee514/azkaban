@@ -57,7 +57,7 @@ public class ProcessJob extends AbstractProcessJob {
       "execute.as.user.override";
   public static final String USER_TO_PROXY = "user.to.proxy";
   public static final String KRB5CCNAME = "KRB5CCNAME";
-  public static final String EXTERNAL_DEPENDENCIES_URLS = "job.loader.urls";
+  public static final String EXTERNAL_DEPENDENCIES_URLS = "dependencies";
 
   protected List<String> externalFiles = new ArrayList();
 
@@ -70,7 +70,7 @@ public class ProcessJob extends AbstractProcessJob {
     // this is in line with what other job types (hadoopJava, spark, pig, hive)
     // is doing
     jobProps.put(CommonJobProperties.JOB_ID, jobId);
-    loader = new RemoteDependencyLoader(getJobProps());
+    loader = new RemoteDependencyLoader(getJobProps(), EXTERNAL_DEPENDENCIES_URLS);
   }
 
   public void setLoader(DependencyLoader loader) {

@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import azkaban.jobExecutor.loaders.DependencyLoader;
+import azkaban.jobExecutor.loaders.RemoteDependencyLoader;
 import org.apache.log4j.Logger;
 
 import azkaban.project.DirectoryFlowLoader;
@@ -41,6 +42,7 @@ public class JavaProcessJob extends ProcessJob {
   public static final String DEFAULT_INITIAL_MEMORY_SIZE = "64M";
   public static final String DEFAULT_MAX_MEMORY_SIZE = "256M";
 
+
   public static String JAVA_COMMAND = "java";
 
 
@@ -56,7 +58,7 @@ public class JavaProcessJob extends ProcessJob {
     return list;
   }
 
-  protected String createCommandLine() {
+  public String createCommandLine() {
     String command = JAVA_COMMAND + " ";
     command += getJVMArguments() + " ";
     command += "-Xms" + getInitialMemorySize() + " ";
@@ -115,8 +117,8 @@ public class JavaProcessJob extends ProcessJob {
     }
 
     // Add external files to classpath
-    if(externalFiles.size() > 0) {
-      classpathList.add(DependencyLoader.getTempDirectory(jobProps) + "/*");
+    for(String file: externalFiles) {
+      classpathList.add(file);
     }
     return classpathList;
   }

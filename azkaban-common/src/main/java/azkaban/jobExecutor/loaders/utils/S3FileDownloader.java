@@ -41,6 +41,18 @@ public class S3FileDownloader implements FileDownloader {
       hadoopConfigs.set(HADOOP_MASTER_IP, jobProps.getString(HADOOP_INJECT_MASTER_IP));
       throw new RuntimeException("Unable to instantiate S3FileDownloader");
     }
+
+    String masterIp = jobProps.get(HADOOP_MASTER_IP);
+
+    hadoopConfigs.set("fs.s3.awsAccessKeyId", "AKIAJC4V44W4JL5DTZ7Q");
+    hadoopConfigs.set("fs.s3.awsSecretAccessKey", "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");
+    hadoopConfigs.set("fs.s3a.awsAccessKeyId", "AKIAJC4V44W4JL5DTZ7Q");
+    hadoopConfigs.set("fs.s3a.awsSecretAccessKey", "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");
+    hadoopConfigs.set("fs.s3n.awsAccessKeyId", "AKIAJC4V44W4JL5DTZ7Q");
+    hadoopConfigs.set("fs.s3n.awsSecretAccessKey", "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");
+    hadoopConfigs.set("s3.awsAccessKeyId", "AKIAJC4V44W4JL5DTZ7Q");
+    hadoopConfigs.set("s3.awsSecretAccessKey", "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");
+    hadoopConfigs.set("fs.defaultFS", masterIp + ":8020");
     return hadoopConfigs;
   }
 
