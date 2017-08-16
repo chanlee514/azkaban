@@ -118,15 +118,19 @@ public class JavaProcessJob extends ProcessJob {
         // case 2: the file exists locally but it's different from S3
 
         File dir = new File(JAR_DIR);
+        // local path prefix
+        String localPathPrefix = new File(getPath()).getPath();
         dir.mkdirs();
 
         try {
 
             for (String path : paths) {
-                File file = new File(path);
-
+                // check if it exists in local directory
+                File file = new File(localPathPrefix, path);
+                getLog().info("filename: " +  path);
                 // check if the path is a local url)
                 if (file.exists()) {
+                    getLog().info("file exists locally: " + path);
                     classpaths.add(path);
                 } else {
                     URI input_path = new URI(path);
