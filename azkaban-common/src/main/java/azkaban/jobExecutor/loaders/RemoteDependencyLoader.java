@@ -32,6 +32,8 @@ public class RemoteDependencyLoader extends DependencyLoader {
   protected Props sysProps;
   protected Props jobProps;
 
+  protected String baseDir;
+
   protected static final String PROTOCOL_SEP = "://";
 
   /**
@@ -48,10 +50,11 @@ public class RemoteDependencyLoader extends DependencyLoader {
    * @param jobProps Azkaban job properties
    *
    */
-  public RemoteDependencyLoader(Props jobProps, String urls) {
+  public RemoteDependencyLoader(Props jobProps, String urls, String jobDir) {
     loaderUrls = jobProps.getStringList(urls, ",");
     unique = jobProps.getBoolean(UNIQUE_FILE_DOWNLOAD, false);
     targetDirectory = getTempDirectory(jobProps);
+    baseDir = jobDir;
   }
 
   /**
@@ -68,7 +71,7 @@ public class RemoteDependencyLoader extends DependencyLoader {
       case "s3a":
         return new S3FileDownloader(jobProps);
       case "local":
-        return new LocalFileDownloader();
+        return new LocalFileDownloader(baseDir);
       default:
         throw new RuntimeException("Protocol unknown: " + protocol);
     }
@@ -135,7 +138,7 @@ public class RemoteDependencyLoader extends DependencyLoader {
         downloadedFiles.add(getFile(url, targetDirectory, unique));
       } catch (IOException e) {
         logger.error("Exception loading dependency: ", e);
-        throw new RuntimeException("Unable to locate dependencies.");
+        throw new RuntimeException("Unable to locate dependencies: " + url);
       }
     }
     return downloadedFiles;

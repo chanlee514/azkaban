@@ -71,7 +71,7 @@ public class ProcessJob extends AbstractProcessJob {
     // is doing
     jobProps.put(CommonJobProperties.JOB_ID, jobId);
     if (loader == null) {
-      loader = new RemoteDependencyLoader(getJobProps(), EXTERNAL_DEPENDENCIES_URLS);
+      loader = new RemoteDependencyLoader(getJobProps(), EXTERNAL_DEPENDENCIES_URLS, getPath());
     }
   }
 

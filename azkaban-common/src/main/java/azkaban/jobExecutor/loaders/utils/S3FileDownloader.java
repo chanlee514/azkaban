@@ -53,19 +53,15 @@ public class S3FileDownloader implements FileDownloader {
   public String download(String url, String localPath) throws IOException {
     try {
       URI jarURI = new URI(url);
-      if (jarURI.getScheme() != null) { // location is a s3 path
-        // download the jar to local
-        logger.info("Specified from s3: " + url);
-        logger.info("Downloading file to " + localPath);
-        String[] bucketKey = bucketAndKey(url.replace("s3://",""));
-        String key = bucketKey[0];
-        String bucket = bucketKey[1];
-        File localFile = new File(localPath);
-        client.getObject(new GetObjectRequest(bucket, key), localFile);
-        return localPath;
-      } else {
-        throw new RuntimeException("Could not find file on local filesystem, and location is not an s3 path. Aborting...");
-      }
+      // download the jar to local
+      logger.info("Specified from s3: " + url);
+      logger.info("Downloading file to " + localPath);
+      String[] bucketKey = bucketAndKey(url.replace("s3://",""));
+      String key = bucketKey[1];
+      String bucket = bucketKey[0];
+      File localFile = new File(localPath);
+      client.getObject(new GetObjectRequest(bucket, key), localFile);
+      return localPath;
     } catch (URISyntaxException e) {
       logger.error("Invalid URI: " + url);
       throw new IOException("Unable to download due to invalid URI " + url);

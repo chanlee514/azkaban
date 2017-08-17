@@ -179,7 +179,7 @@ public class JavaProcessJobTest {
     props.put("classpath", classPaths);
     props.put(ProcessJob.EXTERNAL_DEPENDENCIES_URLS, "s3://blah/someThing.jar,s3://blah/testFile.jar," + localFile.getAbsolutePath());
     props.put(DependencyLoader.UNIQUE_FILE_DOWNLOAD, "false");
-    RemoteDependencyLoader remoteLoader = new RemoteDependencyLoader(props, ProcessJob.EXTERNAL_DEPENDENCIES_URLS);
+    RemoteDependencyLoader remoteLoader = new RemoteDependencyLoader(props, ProcessJob.EXTERNAL_DEPENDENCIES_URLS, job.getPath());
     remoteLoader.setDownloader("s3", new TestFileDownloader());
     job.setLoader(remoteLoader);
 
@@ -204,9 +204,10 @@ public class JavaProcessJobTest {
   public void testDownloaderCanFindS3Files() throws Exception {
     S3FileDownloader downloader = new S3FileDownloader(props);
 
-    String[] bucketKey = downloader.bucketAndKey("s3://bucket/key");
+    String[] bucketKey = downloader.bucketAndKey("bucket/key");
     Assert.assertEquals(bucketKey[0], "bucket");
     Assert.assertEquals(bucketKey[1], "key");
+    downloader.download("s3://usw2-polaris-artifacts-dev/x/com.salesforce/utils_2.11/0.20.1/8e20529dd9bed0934f97a469959d0d8e326dbd19/utils_2.11-0.20.1.jar", "/tmp/whatever.jar");
   }
 
 }
