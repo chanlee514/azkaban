@@ -45,8 +45,8 @@ public class ClassPathUtils {
         try {
             for (String path : paths) {
                 // check if the path is a local url
-                if (checkIfLocal(path, job_path)) {
-                    String localPath = getLocalFile(path, job_path).getPath();
+                if (checkIfLocal(job_path, path)) {
+                    String localPath = getLocalFile(job_path, path).getPath();
                     logger.info("file exists locally: " + localPath);
                     classpaths.add(localPath);
                 } else if (checkIfS3(path)) {
