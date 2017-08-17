@@ -18,9 +18,6 @@ import java.net.URISyntaxException;
 
 public class S3FileDownloader implements FileDownloader {
 
-  public static final String HADOOP_MASTER_IP = "hadoop.master.ip";
-  public static final String HADOOP_INJECT_MASTER_IP = "hadoop-inject." + HADOOP_MASTER_IP;
-
   private transient static org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(S3FileDownloader.class);
 
   protected AmazonS3Client client;
