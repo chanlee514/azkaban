@@ -207,7 +207,6 @@ public class JavaProcessJobTest {
     String[] bucketKey = downloader.bucketAndKey("bucket/key");
     Assert.assertEquals(bucketKey[0], "bucket");
     Assert.assertEquals(bucketKey[1], "key");
-    downloader.download("s3://usw2-polaris-artifacts-dev/x/com.salesforce/utils_2.11/0.20.1/8e20529dd9bed0934f97a469959d0d8e326dbd19/utils_2.11-0.20.1.jar", "/tmp/whatever.jar");
   }
 
 }
