@@ -18,18 +18,15 @@ package azkaban.jobExecutor;
 
 import azkaban.project.DirectoryFlowLoader;
 import azkaban.server.AzkabanServer;
+import azkaban.utils.ClassPathUtils;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
 import azkaban.utils.Utils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -105,81 +102,6 @@ public class JavaProcessJob extends ProcessJob {
         }
     }
 
-    /**
-     * Utility function for loading files from S3/local
-     *
-     * @param paths
-     * @return
-     */
-    protected List<String> getFromLocalOrS3Concurrent(List<String> paths) throws RuntimeException {
-        ArrayList<String> classpaths = new ArrayList<>();
-        // Download the file from S3 URL when
-        // case 1: if the file doesn't exist locally
-        // case 2: the file exists locally but it's different from S3
-
-        File dir = new File(JAR_DIR);
-        // local path prefix
-        String localPathPrefix = new File(getPath()).getPath();
-        dir.mkdirs();
-
-        try {
-
-            for (String path : paths) {
-                // check if it exists in local directory
-                File file = new File(localPathPrefix, path);
-                getLog().info("filename: " +  path);
-                // check if the path is a local url)
-                if (file.exists()) {
-                    getLog().info("file exists locally: " + path);
-                    classpaths.add(path);
-                } else {
-                    URI input_path = new URI(path);
-                    // get file path as key
-                    String key = input_path.getPath();
-
-                    String localPath = dir.getAbsolutePath() + key;
-                    // if it's a s3 path
-                    if (input_path.getScheme() != null && input_path.getScheme().startsWith("s3")) {
-                        // set up the hadoop configs for hadoop file system
-                        setHadoopConfigs();
-
-                        File localFile = new File(localPath);
-                        // getLog().info("path is: s3a://" + input_path.getHost() + input_path.getPath());
-                        Path s3Path = new Path("s3a://" + input_path.getHost() + input_path.getPath());
-                        FileSystem s3Fs = s3Path.getFileSystem(conf);
-
-                        if (!localFile.exists()) {
-                            s3Fs.copyToLocalFile(s3Path, new Path(localPath));
-                        }  // TODO: (ideally this should be MD5 value, need to check how much time it needs to use)
-                        else if (localPath.toLowerCase().contains("snapshot")) {
-                            getLog().info("Updated file: " + key);
-                            s3Fs.copyToLocalFile(s3Path, new Path(localPath));
-                        }
-                        getLog().info("local path: " + localPath);
-                        classpaths.add(localPath);
-
-                    } else {
-                        if (new File(localPath).exists()) {
-                            classpaths.add(localPath);
-                        }
-                    }
-                }
-            }
-
-        } catch (URISyntaxException e1) {
-            getLog().error("URI syntax exception");
-        } catch (IOException e2) {
-            getLog().error("IO exception");
-        }
-
-        // if nothing is added, return the input paths
-        if (classpaths.isEmpty()) {
-            return paths;
-        } else {
-            return classpaths;
-        }
-    }
-
     protected List<String> getClassPaths() {
         List<String> classPaths = getJobProps().getStringList(CLASSPATH, null, ",");
 
@@ -210,9 +132,15 @@ public class JavaProcessJob extends ProcessJob {
             }
         } else {
             getLog().info("Found additional class paths. Loading class paths from local or S3 to azkaban");
-            List<String> pathList = getFromLocalOrS3Concurrent(classPaths);
-            classpathList.addAll(pathList);
-            getLog().info("classpath output: " + classpathList);
+            // set up the hadoop configs for hadoop file system
+            try {
+                setHadoopConfigs();
+                List<String> pathList = ClassPathUtils.getFromLocalOrS3Concurrent(classPaths, getPath(), JAR_DIR, conf);
+                classpathList.addAll(pathList);
+                getLog().info("classpath output: " + classpathList);
+            } catch (IOException e) {
+                getLog().info("IO exception from setting hadoop configuration");
+            }
         }
 
         return classpathList;
