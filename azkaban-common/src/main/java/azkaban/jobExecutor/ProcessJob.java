@@ -70,7 +70,9 @@ public class ProcessJob extends AbstractProcessJob {
     // this is in line with what other job types (hadoopJava, spark, pig, hive)
     // is doing
     jobProps.put(CommonJobProperties.JOB_ID, jobId);
-    loader = new RemoteDependencyLoader(getJobProps(), EXTERNAL_DEPENDENCIES_URLS);
+    if (loader == null) {
+      loader = new RemoteDependencyLoader(getJobProps(), EXTERNAL_DEPENDENCIES_URLS);
+    }
   }
 
   public void setLoader(DependencyLoader loader) {

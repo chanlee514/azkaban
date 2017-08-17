@@ -49,6 +49,7 @@ public class JavaProcessJob extends ProcessJob {
   public JavaProcessJob(String jobid, Props sysProps, Props jobProps,
                         Logger logger) {
     super(jobid, sysProps, jobProps, logger);
+    loader = new RemoteDependencyLoader(jobProps, CLASSPATH);
   }
 
   @Override
