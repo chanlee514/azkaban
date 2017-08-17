@@ -1,6 +1,11 @@
 package azkaban.jobExecutor.loaders.utils;
 
 import azkaban.utils.Props;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -18,42 +23,31 @@ public class S3FileDownloader implements FileDownloader {
 
   private transient static org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(S3FileDownloader.class);
 
-  protected Configuration conf;
+  protected AmazonS3Client client;
 
   public S3FileDownloader(Props jobProps) {
-    try {
-      conf = getHadoopConfigs(jobProps);
-    } catch (IOException e) {
-      logger.error("Invalid configuration for S3 Downloader: ", e);
-    }
+    client = getS3Client();
   }
 
-  /**
-   * Configure Hadoop endpoints and S3 access
-   *
-   * @param jobProps Job properties from job
-   * @throws IOException
-   */
-  protected Configuration getHadoopConfigs(Props jobProps) throws IOException {
-    Configuration hadoopConfigs = new Configuration();
+  private AWSCredentials getAWSCredentials() {
+    DefaultAWSCredentialsProviderChain providerChain = new DefaultAWSCredentialsProviderChain();
+    return providerChain.getCredentials();
+  }
 
-    if (jobProps.containsKey(HADOOP_INJECT_MASTER_IP)) {
-      hadoopConfigs.set(HADOOP_MASTER_IP, jobProps.getString(HADOOP_INJECT_MASTER_IP));
-      throw new RuntimeException("Unable to instantiate S3FileDownloader");
-    }
+  private AmazonS3Client getS3Client() {
+    return new AmazonS3Client(getAWSCredentials()).withRegion(Regions.US_WEST_2);
+  }
 
-    String masterIp = jobProps.get(HADOOP_MASTER_IP);
+  public void setClient(AmazonS3Client client) {
+    this.client = client;
+  }
 
-    hadoopConfigs.set("fs.s3.awsAccessKeyId", "AKIAJC4V44W4JL5DTZ7Q");
-    hadoopConfigs.set("fs.s3.awsSecretAccessKey", "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");
-    hadoopConfigs.set("fs.s3a.awsAccessKeyId", "AKIAJC4V44W4JL5DTZ7Q");
-    hadoopConfigs.set("fs.s3a.awsSecretAccessKey", "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");
-    hadoopConfigs.set("fs.s3n.awsAccessKeyId", "AKIAJC4V44W4JL5DTZ7Q");
-    hadoopConfigs.set("fs.s3n.awsSecretAccessKey", "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");
-    hadoopConfigs.set("s3.awsAccessKeyId", "AKIAJC4V44W4JL5DTZ7Q");
-    hadoopConfigs.set("s3.awsSecretAccessKey", "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");
-    hadoopConfigs.set("fs.defaultFS", masterIp + ":8020");
-    return hadoopConfigs;
+  public static String[] bucketAndKey(String url) {
+    int firstSlash = url.indexOf("/");
+    String bucket = url.substring(0, firstSlash);
+    String key = url.substring(firstSlash + 1);
+    String[] bucketAndKey = {bucket, key};
+    return bucketAndKey;
   }
 
   /**
@@ -66,12 +60,15 @@ public class S3FileDownloader implements FileDownloader {
     try {
       URI jarURI = new URI(url);
       if (jarURI.getScheme() != null) { // location is a s3 path
+        ;
         // download the jar to local
         logger.info("Specified from s3: " + url);
         logger.info("Downloading file to " + localPath);
-        Path s3Path = new Path("s3a://" + jarURI.getHost() + jarURI.getPath());
-        FileSystem s3Fs = s3Path.getFileSystem(conf);
-        s3Fs.copyToLocalFile(s3Path, new Path(localPath));
+        String[] bucketKey = bucketAndKey(url);
+        String key = bucketKey[0];
+        String bucket = bucketKey[1];
+        File localFile = new File(localPath);
+        client.getObject(new GetObjectRequest(bucket, key), localFile);
         return localPath;
       } else {
         throw new RuntimeException("Could not find file on local filesystem, and location is not an s3 path. Aborting...");
