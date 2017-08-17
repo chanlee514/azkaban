@@ -202,13 +202,11 @@ public class JavaProcessJobTest {
 
   @Test
   public void testDownloaderCanFindS3Files() throws Exception {
-    props.put("hadoop.master.ip", "10.36.75.138");
     S3FileDownloader downloader = new S3FileDownloader(props);
 
-    String[] bucketKey = downloader.bucketAndKey("bucket/key");
+    String[] bucketKey = downloader.bucketAndKey("s3://bucket/key");
     Assert.assertEquals(bucketKey[0], "bucket");
     Assert.assertEquals(bucketKey[1], "key");
-    downloader.download("s3://usw2-polaris-artifacts-dev/x/com.salesforce/utils_2.11/0.20.1/8e20529dd9bed0934f97a469959d0d8e326dbd19/utils_2.11-0.20.1.jar,s3://usw2-polaris-artifacts-dev/x/com.salesforce/koalavro/0.2.35/937e6f60077c3840efcfa059bc5c6c429878359c/koalavro-0.2.35.jar", "/tmp/localDownload.jar");
   }
 
 }

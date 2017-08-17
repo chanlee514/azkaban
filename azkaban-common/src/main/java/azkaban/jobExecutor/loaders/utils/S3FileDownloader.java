@@ -54,11 +54,10 @@ public class S3FileDownloader implements FileDownloader {
     try {
       URI jarURI = new URI(url);
       if (jarURI.getScheme() != null) { // location is a s3 path
-        ;
         // download the jar to local
         logger.info("Specified from s3: " + url);
         logger.info("Downloading file to " + localPath);
-        String[] bucketKey = bucketAndKey(url);
+        String[] bucketKey = bucketAndKey(url.replace("s3://",""));
         String key = bucketKey[0];
         String bucket = bucketKey[1];
         File localFile = new File(localPath);
