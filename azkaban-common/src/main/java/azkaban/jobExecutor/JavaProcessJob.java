@@ -16,9 +16,9 @@
 
 package azkaban.jobExecutor;
 
+import azkaban.utils.ClassPathUtils;
 import azkaban.project.DirectoryFlowLoader;
 import azkaban.server.AzkabanServer;
-import azkaban.utils.ClassPathUtils;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
 import azkaban.utils.Utils;
@@ -50,7 +50,6 @@ public class JavaProcessJob extends ProcessJob {
 
     protected Configuration conf = new Configuration();
 
-    public static final String HADOOP_CONF_DIR_PROP = "hadoop.conf.dir"; // hadoop dir with xml conf files. from azkaban private.props
     public static final String HADOOP_INJECT_MASTER_IP = "hadoop-inject." + "hadoop.master.ip";
 
 
