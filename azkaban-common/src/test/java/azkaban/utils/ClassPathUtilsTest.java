@@ -27,13 +27,12 @@ public class ClassPathUtilsTest {
   private static String localFileName = "localFile";
   private static File localFile;
   private static String localFileAbsolutePath;
-  private ClassPathUtils classPathUtils;
-  private Props jobProps;
   private static String s3ClassPath = "s3://usw2-polaris-artifacts-dev/x/salescloud-azkabanworkflows-1.4.0-SNAPSHOT.jar";
   private static String s3aClassPath = "s3a://usw2-polaris-artifacts-dev/x/salescloud-azkabanworkflows-1.4.0-SNAPSHOT.jar";
-
   @Rule
   public TemporaryFolder temp = new TemporaryFolder();
+  private ClassPathUtils classPathUtils;
+  private Props jobProps;
 
   @Before
   public void setUp() throws IOException {
