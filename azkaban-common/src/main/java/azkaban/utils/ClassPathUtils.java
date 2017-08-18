@@ -1,6 +1,7 @@
 package azkaban.utils;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.commons.pool.impl.GenericKeyedObjectPool;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -21,19 +22,40 @@ public class ClassPathUtils {
 
   protected static Logger logger = Logger.getLogger(ClassPathUtils.class);
 
+  protected static Configuration conf;
+
+  protected static String HADOOP_PREFIX = "hadoop.master.ip";
+
   /**
-   * Private constructor.
+   * public constructor
+   *
+   * @param props
    */
-  private ClassPathUtils() {
+  public ClassPathUtils(Props props) {
+    conf = new Configuration();
+    if (props.containsKey(HADOOP_PREFIX))
+    conf.set(HADOOP_PREFIX, props.getString(HADOOP_PREFIX));
+  }
+
+  /**
+   * Return configuration
+   *
+   * @return
+   */
+  protected Configuration getConf() {
+    return conf;
   }
 
   /**
    * Utility function for loading files from S3/local
    *
-   * @param paths
+   * @param paths list of urls (local or s3)
+   * @param job_path returned by getPath() in ProcessJob, directory path of the current job
+   * @param jar_dir jar directory
    * @return
+   * @throws RuntimeException
    */
-  public static List<String> getFromLocalOrS3Concurrent(List<String> paths, String job_path, String jar_dir, Configuration conf) throws RuntimeException {
+  public List<String> getFromLocalOrS3Concurrent(List<String> paths, String job_path, String jar_dir) throws RuntimeException {
     ArrayList<String> classpaths = new ArrayList<>();
     // Download the file from S3 URL when
     // case 1: if the file doesn't exist locally
@@ -68,36 +90,59 @@ public class ClassPathUtils {
     }
   }
 
-  public static File getLocalFile(String dir, String job_path) {
-    String localPathPrefix;
-    if (new File(dir).exists()) {
-      localPathPrefix = new File(dir).getPath();
-    } else {
-      localPathPrefix = dir;
-    }
-    return new File(localPathPrefix, job_path);
+  /**
+   * Get local file
+   *
+   * @param dir directory name
+   * @param path relative path name
+   * @return
+   */
+  protected File getLocalFile(String dir, String path) {
+    File file = new File(dir, path);
+    return file.exists() && file.isFile() ? file : null;
   }
 
-  public static File getLocalFile(String job_path) {
-    File file = new File(job_path);
-    if (file.exists()) {
-      return new File(job_path);
-    } else {
-      return null;
-    }
+  /**
+   * Get local file
+   *
+   * @param path absolute name
+   * @return
+   */
+  protected File getLocalFile(String path) {
+//    File file = new File(path);
+//    if (file.exists() && file.isFile()) {
+//      return new File(path);
+//    } else {
+//      return null;
+//    }
+    File file = new File(path);
+    return file != null && file.isFile() ? file : null;
   }
 
-  public static Boolean checkIfLocal(String dir, String job_path) {
-    File localFile = getLocalFile(dir, job_path);
+  /**
+   * Check if the file is local
+   *
+   * @param dir directory name
+   * @param path relative path name
+   * @return
+   */
+  protected Boolean checkIfLocal(String dir, String path) {
+    File localFile = getLocalFile(dir, path);
     return localFile != null && localFile.exists();
   }
 
-  public static Boolean checkIfLocal(String job_path) {
-    File localFile = getLocalFile(job_path);
+  /**
+   * Check if it's a local file
+   *
+   * @param path
+   * @return
+   */
+  protected Boolean checkIfLocal(String path) {
+    File localFile = getLocalFile(path);
     return localFile != null && localFile.exists();
   }
 
-  public static Boolean checkIfS3(String path) throws URISyntaxException {
+  protected Boolean checkIfS3(String path) throws URISyntaxException {
     URI input_path = new URI(path);
 
     String scheme = input_path.getScheme();
@@ -105,7 +150,7 @@ public class ClassPathUtils {
     return (scheme != null && (scheme.equals("s3") || scheme.equals("s3a")));
   }
 
-  public static List<String> downloadFromS3(String path, String jar_dir, Configuration conf) throws URISyntaxException, IOException {
+  protected List<String> downloadFromS3(String path, String jar_dir, Configuration conf) throws URISyntaxException, IOException {
     // Convert the path into a local path
     URI input_path = new URI(path);
     String key = input_path.getPath();

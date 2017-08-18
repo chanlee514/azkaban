@@ -23,11 +23,9 @@ import azkaban.utils.Pair;
 import azkaban.utils.Props;
 import azkaban.utils.Utils;
 import org.apache.commons.lang.exception.ExceptionUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,16 +41,16 @@ public class JavaProcessJob extends ProcessJob {
 
   public static final String DEFAULT_INITIAL_MEMORY_SIZE = "64M";
   public static final String DEFAULT_MAX_MEMORY_SIZE = "256M";
-  public static final String HADOOP_INJECT_MASTER_IP = "hadoop-inject." + "hadoop.master.ip";
   public static String JAVA_COMMAND = "java";
   // jar directory
   public static String JAR_DIR = "/tmp/jars/";
-  protected Configuration conf = new Configuration();
+  protected ClassPathUtils classPathUtils;
 
 
   public JavaProcessJob(String jobid, Props sysProps, Props jobProps,
                         Logger logger) {
     super(jobid, sysProps, jobProps, logger);
+    classPathUtils = new ClassPathUtils(jobProps);
   }
 
   @Override
@@ -87,16 +85,6 @@ public class JavaProcessJob extends ProcessJob {
     return "-cp " + createArguments(classPath, ":") + " ";
   }
 
-  /**
-   * Set up hadoop configs for hadoopclient
-   */
-  protected void setHadoopConfigs() throws IOException {
-    conf = new Configuration();
-
-    if (jobProps.containsKey(HADOOP_INJECT_MASTER_IP)) {
-      conf.set("hadoop.master.ip", jobProps.getString(HADOOP_INJECT_MASTER_IP));
-    }
-  }
 
   protected List<String> getClassPaths() {
     List<String> classPaths = getJobProps().getStringList(CLASSPATH, null, ",");
@@ -130,11 +118,10 @@ public class JavaProcessJob extends ProcessJob {
       getLog().info("Found additional class paths. Loading class paths from local or S3 to azkaban");
       // set up the hadoop configs for hadoop file system
       try {
-        setHadoopConfigs();
-        List<String> pathList = ClassPathUtils.getFromLocalOrS3Concurrent(classPaths, getPath(), JAR_DIR, conf);
+        List<String> pathList = classPathUtils.getFromLocalOrS3Concurrent(classPaths, getPath(), JAR_DIR);
         classpathList.addAll(pathList);
         getLog().info("classpath output: " + classpathList);
-      } catch (IOException e) {
+      } catch (RuntimeException e) {
         getLog().error("IO exception from setting hadoop configuration - Error: " + ExceptionUtils.getStackTrace(e));
       }
     }

@@ -24,9 +24,14 @@ import java.io.IOException;
 
 public class ClassPathUtilsTest {
   private static final String inputContent = "for testing";
-  public static String localFileName = "localFile";
-  public static File localFile;
-  public static String localFileAbsolutePath;
+  private static String localFileName = "localFile";
+  private static File localFile;
+  private static String localFileAbsolutePath;
+  private ClassPathUtils classPathUtils;
+  private Props jobProps;
+  private static String s3ClassPath = "s3://usw2-polaris-artifacts-dev/x/salescloud-azkabanworkflows-1.4.0-SNAPSHOT.jar";
+  private static String s3aClassPath = "s3a://usw2-polaris-artifacts-dev/x/salescloud-azkabanworkflows-1.4.0-SNAPSHOT.jar";
+
   @Rule
   public TemporaryFolder temp = new TemporaryFolder();
 
@@ -34,6 +39,9 @@ public class ClassPathUtilsTest {
   public void setUp() throws IOException {
     localFile = temp.newFile(localFileName);
     localFileAbsolutePath = localFile.getAbsolutePath();
+    jobProps = new Props();
+    jobProps.put("hadoop.master.ip", "http://10.36.73.253");
+    classPathUtils = new ClassPathUtils(jobProps);
 
     // Dump local File
     try {
@@ -50,31 +58,51 @@ public class ClassPathUtilsTest {
   }
 
   @Test
-  public void testLocalPath() throws Exception {
+  public void testCheckIfLocalPath() throws Exception {
     String invalidLocalPath = localFileAbsolutePath + "2";
 
     // if provide absolute path only should still return true
-    Assert.assertTrue(ClassPathUtils.checkIfLocal(localFileAbsolutePath));
+    Assert.assertTrue(classPathUtils.checkIfLocal(localFileAbsolutePath));
     // if provide absolute path & empty directory name should still return true
-    Assert.assertTrue(ClassPathUtils.checkIfLocal("", localFileAbsolutePath));
+    Assert.assertTrue(classPathUtils.checkIfLocal("", localFileAbsolutePath));
     // if provide a correct base directory and file name, should return true
-    Assert.assertTrue(ClassPathUtils.checkIfLocal(localFile.getParent(), localFile.getName()));
+    Assert.assertTrue(classPathUtils.checkIfLocal(localFile.getParent(), localFile.getName()));
     // if provide a wrong base directory and file name, should return false
-    Assert.assertFalse(ClassPathUtils.checkIfLocal(localFile.getParent() + "1", localFile.getName()));
+    Assert.assertFalse(classPathUtils.checkIfLocal(localFile.getParent() + "1", localFile.getName()));
     // if provide a wrong base directory and file name, should return false
-    Assert.assertFalse(ClassPathUtils.checkIfLocal(localFile.getParent() + "1", localFileAbsolutePath));
-    Assert.assertFalse(ClassPathUtils.checkIfLocal("", invalidLocalPath));
-  }
+    Assert.assertFalse(classPathUtils.checkIfLocal(localFile.getParent() + "1", localFileAbsolutePath));
+    // if provide a wrong base directory and file name, should return false
+    Assert.assertFalse(classPathUtils.checkIfLocal("", invalidLocalPath));
+    // if provide a wrong base directory and file name, should return false
+    Assert.assertFalse(classPathUtils.checkIfLocal(invalidLocalPath));
+    // if provide a s3 path, should return false
+    Assert.assertFalse(classPathUtils.checkIfLocal(s3aClassPath));
 
+  }
 
   @Test
   public void testS3ClassPaths() throws Exception {
-    String s3ClassPath = "s3://usw2-polaris-artifacts-dev/x/salescloud-azkabanworkflows-1.4.0-SNAPSHOT.jar";
-    String s3aClassPath = "s3a://usw2-polaris-artifacts-dev/x/salescloud-azkabanworkflows-1.4.0-SNAPSHOT.jar";
+    Assert.assertTrue(classPathUtils.checkIfS3(s3ClassPath));
+    Assert.assertTrue(classPathUtils.checkIfS3(s3aClassPath));
+    Assert.assertFalse(classPathUtils.checkIfS3(localFileAbsolutePath));
+  }
 
-    Assert.assertTrue(ClassPathUtils.checkIfS3(s3ClassPath));
-    Assert.assertTrue(ClassPathUtils.checkIfS3(s3aClassPath));
-    Assert.assertFalse(ClassPathUtils.checkIfS3(localFileAbsolutePath));
+  @Test
+  public void testGetLocalPath() throws Exception {
+    String invalidLocalPath = localFileAbsolutePath + "2";
+
+    // similar to testCheckIfLocalPath(), check the existence of a local or non-local file
+    // valid file scenarios
+    Assert.assertTrue(classPathUtils.getLocalFile(localFileAbsolutePath).equals(localFile));
+    Assert.assertTrue(classPathUtils.getLocalFile("", localFileAbsolutePath).equals(localFile));
+    Assert.assertTrue(classPathUtils.getLocalFile(localFile.getParent(), localFile.getName()).equals(localFile));
+    // invalid invalid scenarios
+    Assert.assertFalse(classPathUtils.getLocalFile(localFile.getParent() + "1", localFile.getName()) != null);
+    Assert.assertFalse(classPathUtils.getLocalFile(localFile.getParent() + "1", localFileAbsolutePath) != null);
+    Assert.assertFalse(classPathUtils.getLocalFile("", invalidLocalPath) != null);
+    Assert.assertFalse(classPathUtils.getLocalFile(invalidLocalPath) != null);
+    Assert.assertFalse(classPathUtils.getLocalFile(s3aClassPath) != null);
+
   }
 
 }
