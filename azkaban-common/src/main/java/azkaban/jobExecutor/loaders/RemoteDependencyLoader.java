@@ -1,6 +1,5 @@
 package azkaban.jobExecutor.loaders;
 
-import azkaban.jobExecutor.ProcessJob;
 import azkaban.jobExecutor.loaders.utils.FileDownloader;
 import azkaban.jobExecutor.loaders.utils.LocalFileDownloader;
 import azkaban.jobExecutor.loaders.utils.S3FileDownloader;
@@ -15,6 +14,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.stream.Stream;
 
 
 /**
@@ -28,6 +32,7 @@ public class RemoteDependencyLoader extends DependencyLoader {
   private String targetDirectory;
   protected List<String> loaderUrls;
   protected Map<String, FileDownloader> downloaders = new HashMap();
+  protected ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
 
   protected Props sysProps;
   protected Props jobProps;
@@ -48,7 +53,6 @@ public class RemoteDependencyLoader extends DependencyLoader {
 
   /**
    * @param jobProps Azkaban job properties
-   *
    */
   public RemoteDependencyLoader(Props jobProps, String urls, String jobDir) {
     loaderUrls = jobProps.getStringList(urls, ",");
@@ -67,9 +71,9 @@ public class RemoteDependencyLoader extends DependencyLoader {
   protected FileDownloader defaultDownloader(String protocol) {
     switch (protocol) {
       case "s3":
-        return new S3FileDownloader(jobProps);
+        return new S3FileDownloader();
       case "s3a":
-        return new S3FileDownloader(jobProps);
+        return new S3FileDownloader();
       case "local":
         return new LocalFileDownloader(baseDir);
       default:
@@ -91,7 +95,7 @@ public class RemoteDependencyLoader extends DependencyLoader {
       String[] protocolAndPath = url.split(PROTOCOL_SEP);
       String protocol;
       String path;
-      if(protocolAndPath.length < 2){
+      if (protocolAndPath.length < 2) {
         protocol = "local";
         path = url;
       } else {
@@ -133,14 +137,15 @@ public class RemoteDependencyLoader extends DependencyLoader {
    */
   public List<String> getDependencies(List<String> urls) {
     List<String> downloadedFiles = new ArrayList();
-    for (String url : urls) {
-      try {
-        downloadedFiles.add(getFile(url, targetDirectory, unique));
-      } catch (IOException e) {
-        logger.error("Exception loading dependency: ", e);
-        throw new RuntimeException("Unable to locate dependencies: " + url);
-      }
-    }
+    urls.stream()
+            .map(url -> executor.submit(() -> getFile(url, targetDirectory, unique)))
+            .forEach(future -> {
+              try {
+                downloadedFiles.add(future.get());
+              } catch (Exception e) {
+                logger.error("Download failed for reason: \n %s".format(e.getMessage()));
+              }
+            });
     return downloadedFiles;
   }
 

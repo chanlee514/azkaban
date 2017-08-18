@@ -202,7 +202,7 @@ public class JavaProcessJobTest {
 
   @Test
   public void testDownloaderCanFindS3Files() throws Exception {
-    S3FileDownloader downloader = new S3FileDownloader(props);
+    S3FileDownloader downloader = new S3FileDownloader();
 
     String[] bucketKey = downloader.bucketAndKey("bucket/key");
     Assert.assertEquals(bucketKey[0], "bucket");

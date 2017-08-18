@@ -1,11 +1,11 @@
 package azkaban.jobExecutor.loaders.utils;
 
-import azkaban.utils.Props;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,7 +19,7 @@ public class S3FileDownloader implements FileDownloader {
 
   protected AmazonS3Client client;
 
-  public S3FileDownloader(Props jobProps) {
+  public S3FileDownloader() {
     client = getS3Client();
   }
 
@@ -60,7 +60,8 @@ public class S3FileDownloader implements FileDownloader {
       String key = bucketKey[1];
       String bucket = bucketKey[0];
       File localFile = new File(localPath);
-      client.getObject(new GetObjectRequest(bucket, key), localFile);
+      GetObjectRequest request = new GetObjectRequest(bucket, key);
+      client.getObject(request, localFile);
       return localPath;
     } catch (URISyntaxException e) {
       logger.error("Invalid URI: " + url);
