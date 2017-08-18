@@ -16,9 +16,9 @@
 
 package azkaban.jobExecutor;
 
-import azkaban.utils.ClassPathUtils;
 import azkaban.project.DirectoryFlowLoader;
 import azkaban.server.AzkabanServer;
+import azkaban.utils.ClassPathUtils;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
 import azkaban.utils.Utils;
@@ -42,15 +42,11 @@ public class JavaProcessJob extends ProcessJob {
 
     public static final String DEFAULT_INITIAL_MEMORY_SIZE = "64M";
     public static final String DEFAULT_MAX_MEMORY_SIZE = "256M";
-
+    public static final String HADOOP_INJECT_MASTER_IP = "hadoop-inject." + "hadoop.master.ip";
     public static String JAVA_COMMAND = "java";
     // jar directory
     public static String JAR_DIR = "/tmp/jars/";
-
-
     protected Configuration conf = new Configuration();
-
-    public static final String HADOOP_INJECT_MASTER_IP = "hadoop-inject." + "hadoop.master.ip";
 
 
     public JavaProcessJob(String jobid, Props sysProps, Props jobProps,

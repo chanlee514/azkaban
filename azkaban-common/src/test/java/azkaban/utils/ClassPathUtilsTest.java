@@ -16,40 +16,23 @@
 
 package azkaban.utils;
 
-import azkaban.jobExecutor.*;
-import azkaban.utils.ClassPathUtils;
 import org.junit.*;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Date;
 
 public class ClassPathUtilsTest {
     private static final String inputContent = "for testing";
-    @ClassRule
-    public static TemporaryFolder classTemp = new TemporaryFolder();
-    private static String localFileName = "localFile";
-    private static File localFile;
-    private static String localFileAbsolutePath;
+    public static String localFileName = "localFile";
+    public static File localFile;
+    public static String localFileAbsolutePath;
     @Rule
     public TemporaryFolder temp = new TemporaryFolder();
 
-    @BeforeClass
-    public static void init() throws IOException {
-        // Get the classpath
-    }
-
-    @AfterClass
-    public static void cleanup() {
-        classTemp.delete();
-    }
-
     @Before
     public void setUp() throws IOException {
-        long time = (new Date()).getTime();
-        localFileName += time;
-        localFile = classTemp.newFile(localFileName);
+        localFile = temp.newFile(localFileName);
         localFileAbsolutePath = localFile.getAbsolutePath();
 
         // Dump local File
