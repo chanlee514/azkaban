@@ -96,11 +96,11 @@ public class ClassPathUtilsTest {
     Assert.assertTrue(classPathUtils.getLocalFile("", localFileAbsolutePath).equals(localFile));
     Assert.assertTrue(classPathUtils.getLocalFile(localFile.getParent(), localFile.getName()).equals(localFile));
     // invalid invalid scenarios
-    Assert.assertFalse(classPathUtils.getLocalFile(localFile.getParent() + "1", localFile.getName()) != null);
-    Assert.assertFalse(classPathUtils.getLocalFile(localFile.getParent() + "1", localFileAbsolutePath) != null);
-    Assert.assertFalse(classPathUtils.getLocalFile("", invalidLocalPath) != null);
-    Assert.assertFalse(classPathUtils.getLocalFile(invalidLocalPath) != null);
-    Assert.assertFalse(classPathUtils.getLocalFile(s3aClassPath) != null);
+    Assert.assertNull(classPathUtils.getLocalFile(localFile.getParent() + "1", localFile.getName()));
+    Assert.assertNull(classPathUtils.getLocalFile(localFile.getParent() + "1", localFileAbsolutePath));
+    Assert.assertNull(classPathUtils.getLocalFile("", invalidLocalPath));
+    Assert.assertNull(classPathUtils.getLocalFile(invalidLocalPath));
+    Assert.assertNull(classPathUtils.getLocalFile(s3aClassPath));
 
   }
 
