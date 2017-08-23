@@ -109,12 +109,6 @@ public class ClassPathUtils {
    * @return
    */
   protected File getLocalFile(String path) {
-//    File file = new File(path);
-//    if (file.exists() && file.isFile()) {
-//      return new File(path);
-//    } else {
-//      return null;
-//    }
     File file = new File(path);
     return file != null && file.isFile() ? file : null;
   }
@@ -143,33 +137,30 @@ public class ClassPathUtils {
   }
 
   protected Boolean checkIfS3(String path) throws URISyntaxException {
-    URI input_path = new URI(path);
+    URI inputPath = new URI(path);
 
-    String scheme = input_path.getScheme();
+    String scheme = inputPath.getScheme();
     // if it's a s3 path
     return (scheme != null && (scheme.equals("s3") || scheme.equals("s3a")));
   }
 
   protected List<String> downloadFromS3(String path, String jar_dir, Configuration conf) throws URISyntaxException, IOException {
     // Convert the path into a local path
-    URI input_path = new URI(path);
-    String key = input_path.getPath();
+    URI inputPath = new URI(path);
+    String key = inputPath.getPath();
     File localJarFile = new File(jar_dir, key);
     String localJarPath = localJarFile.getAbsolutePath();
-
-    // set up the hadoop configs for hadoop file system
-    // setHadoopConfigs();
 
     List<String> output = new ArrayList<>();
 
     File localFile = new File(localJarPath);
 
-    Path s3Path = new Path("s3a://" + input_path.getHost() + input_path.getPath());
+    Path s3Path = new Path("s3a://" + inputPath.getHost() + inputPath.getPath());
     FileSystem s3Fs = s3Path.getFileSystem(conf);
 
     if (!localFile.exists()) {
       s3Fs.copyToLocalFile(s3Path, new Path(localJarPath));
-    } else if (input_path.getPath().toLowerCase().contains("snapshot")) {
+    } else if (inputPath.getPath().toLowerCase().contains("snapshot")) {
       logger.info("Updated file: " + key);
       s3Fs.copyToLocalFile(s3Path, new Path(localJarPath));
     }
