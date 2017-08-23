@@ -50,7 +50,7 @@ public class JavaProcessJob extends ProcessJob {
   public JavaProcessJob(String jobid, Props sysProps, Props jobProps,
                         Logger logger) {
     super(jobid, sysProps, jobProps, logger);
-    classPathUtils = new ClassPathUtils(jobProps);
+    classPathUtils = new ClassPathUtils();
   }
 
   @Override
@@ -118,7 +118,7 @@ public class JavaProcessJob extends ProcessJob {
       getLog().info("Found additional class paths. Loading class paths from local or S3 to azkaban");
       // set up the hadoop configs for hadoop file system
       try {
-        List<String> pathList = classPathUtils.getFromLocalOrS3Concurrent(classPaths, getPath(), JAR_DIR);
+        List<String> pathList = classPathUtils.getFromLocalOrS3Concurrent(classPaths, getPath(), JAR_DIR, jobProps);
         classpathList.addAll(pathList);
         getLog().info("classpath output: " + classpathList);
       } catch (RuntimeException e) {

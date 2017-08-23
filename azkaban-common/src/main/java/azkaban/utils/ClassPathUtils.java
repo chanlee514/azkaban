@@ -1,7 +1,6 @@
 package azkaban.utils;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
-import org.apache.commons.pool.impl.GenericKeyedObjectPool;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -24,18 +23,8 @@ public class ClassPathUtils {
 
   protected static Configuration conf;
 
-  protected static String HADOOP_PREFIX = "hadoop.master.ip";
 
-  /**
-   * public constructor
-   *
-   * @param props
-   */
-  public ClassPathUtils(Props props) {
-    conf = new Configuration();
-    if (props.containsKey(HADOOP_PREFIX))
-    conf.set(HADOOP_PREFIX, props.getString(HADOOP_PREFIX));
-  }
+  protected static String HADOOP_PREFIX = "hadoop.master.ip";
 
   /**
    * Return configuration
@@ -43,19 +32,20 @@ public class ClassPathUtils {
    * @return
    */
   protected Configuration getConf() {
+
     return conf;
   }
 
   /**
    * Utility function for loading files from S3/local
    *
-   * @param paths list of urls (local or s3)
+   * @param paths    list of urls (local or s3)
    * @param job_path returned by getPath() in ProcessJob, directory path of the current job
-   * @param jar_dir jar directory
+   * @param jar_dir  jar directory
    * @return
    * @throws RuntimeException
    */
-  public List<String> getFromLocalOrS3Concurrent(List<String> paths, String job_path, String jar_dir) throws RuntimeException {
+  public List<String> getFromLocalOrS3Concurrent(List<String> paths, String job_path, String jar_dir, Props props) throws RuntimeException {
     ArrayList<String> classpaths = new ArrayList<>();
     // Download the file from S3 URL when
     // case 1: if the file doesn't exist locally
@@ -72,7 +62,7 @@ public class ClassPathUtils {
           logger.info("file exists locally: " + localPath);
           classpaths.add(localPath);
         } else if (checkIfS3(path)) {
-          classpaths.addAll(downloadFromS3(path, jar_dir, conf));
+          classpaths.addAll(downloadFromS3(path, jar_dir, props));
         }
       }
 
@@ -93,7 +83,7 @@ public class ClassPathUtils {
   /**
    * Get local file
    *
-   * @param dir directory name
+   * @param dir  directory name
    * @param path relative path name
    * @return
    */
@@ -116,7 +106,7 @@ public class ClassPathUtils {
   /**
    * Check if the file is local
    *
-   * @param dir directory name
+   * @param dir  directory name
    * @param path relative path name
    * @return
    */
@@ -144,7 +134,7 @@ public class ClassPathUtils {
     return (scheme != null && (scheme.equals("s3") || scheme.equals("s3a")));
   }
 
-  protected List<String> downloadFromS3(String path, String jar_dir, Configuration conf) throws URISyntaxException, IOException {
+  protected List<String> downloadFromS3(String path, String jar_dir, Props props) throws URISyntaxException, IOException {
     // Convert the path into a local path
     URI inputPath = new URI(path);
     String key = inputPath.getPath();
@@ -155,8 +145,13 @@ public class ClassPathUtils {
 
     File localFile = new File(localJarPath);
 
+    Configuration conf = new Configuration();
+    if (props.containsKey(HADOOP_PREFIX))
+      conf.set(HADOOP_PREFIX, props.getString(HADOOP_PREFIX));
+
     Path s3Path = new Path("s3a://" + inputPath.getHost() + inputPath.getPath());
     FileSystem s3Fs = s3Path.getFileSystem(conf);
+
 
     if (!localFile.exists()) {
       s3Fs.copyToLocalFile(s3Path, new Path(localJarPath));

@@ -40,7 +40,7 @@ public class ClassPathUtilsTest {
     localFileAbsolutePath = localFile.getAbsolutePath();
     jobProps = new Props();
     jobProps.put("hadoop.master.ip", "http://10.36.73.253");
-    classPathUtils = new ClassPathUtils(jobProps);
+    classPathUtils = new ClassPathUtils();
 
     // Dump local File
     try {
