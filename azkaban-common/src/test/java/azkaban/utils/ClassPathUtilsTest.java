@@ -98,6 +98,8 @@ public class ClassPathUtilsTest {
     Assert.assertNull(classPathUtils.getLocalFile(localFile.getParent() + "1", localFile.getName()));
     Assert.assertNull(classPathUtils.getLocalFile(localFile.getParent() + "1", localFileAbsolutePath));
     Assert.assertNull(classPathUtils.getLocalFile("", invalidLocalPath));
+    Assert.assertNull(classPathUtils.getLocalFile(invalidLocalPath));
+    Assert.assertNull(classPathUtils.getLocalFile(s3aClassPath));
 
   }
 
