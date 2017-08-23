@@ -57,6 +57,29 @@ public class ClassPathUtilsTest {
   }
 
   @Test
+  public void testCheckIfLocalPath() throws Exception {
+    String invalidLocalPath = localFileAbsolutePath + "2";
+
+    // if provide absolute path only should still return true
+    Assert.assertTrue(classPathUtils.checkIfLocal(localFileAbsolutePath));
+    // if provide absolute path & empty directory name should still return true
+    Assert.assertTrue(classPathUtils.checkIfLocal("", localFileAbsolutePath));
+    // if provide a correct base directory and file name, should return true
+    Assert.assertTrue(classPathUtils.checkIfLocal(localFile.getParent(), localFile.getName()));
+    // if provide a wrong base directory and file name, should return false
+    Assert.assertFalse(classPathUtils.checkIfLocal(localFile.getParent() + "1", localFile.getName()));
+    // if provide a wrong base directory and file name, should return false
+    Assert.assertFalse(classPathUtils.checkIfLocal(localFile.getParent() + "1", localFileAbsolutePath));
+    // if provide a wrong base directory and file name, should return false
+    Assert.assertFalse(classPathUtils.checkIfLocal("", invalidLocalPath));
+    // if provide a wrong base directory and file name, should return false
+    Assert.assertFalse(classPathUtils.checkIfLocal(invalidLocalPath));
+    // if provide a s3 path, should return false
+    Assert.assertFalse(classPathUtils.checkIfLocal(s3aClassPath));
+
+  }
+
+  @Test
   public void testS3ClassPaths() throws Exception {
     Assert.assertTrue(classPathUtils.checkIfS3(s3ClassPath));
     Assert.assertTrue(classPathUtils.checkIfS3(s3aClassPath));

@@ -10,7 +10,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,7 +57,7 @@ public class ClassPathUtils {
     try {
       for (String path : paths) {
         // check if the path is a local url
-        if (Paths.get(job_path, path) != null) {
+        if (checkIfLocal(job_path, path)) {
           String localPath = getLocalFile(job_path, path).getPath();
           logger.info("file exists locally: " + localPath);
           classpaths.add(localPath);
@@ -102,6 +101,29 @@ public class ClassPathUtils {
   protected File getLocalFile(String path) {
     File file = new File(path);
     return file != null && file.isFile() ? file : null;
+  }
+
+  /**
+   * Check if the file is local
+   *
+   * @param dir  directory name
+   * @param path relative path name
+   * @return
+   */
+  protected Boolean checkIfLocal(String dir, String path) {
+    File localFile = getLocalFile(dir, path);
+    return localFile != null && localFile.exists();
+  }
+
+  /**
+   * Check if it's a local file
+   *
+   * @param path
+   * @return
+   */
+  protected Boolean checkIfLocal(String path) {
+    File localFile = getLocalFile(path);
+    return localFile != null && localFile.exists();
   }
 
   protected Boolean checkIfS3(String path) throws URISyntaxException {
