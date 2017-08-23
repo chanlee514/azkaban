@@ -16,17 +16,18 @@
 
 package azkaban.jobExecutor;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.log4j.Logger;
-
 import azkaban.project.DirectoryFlowLoader;
 import azkaban.server.AzkabanServer;
+import azkaban.utils.ClassPathUtils;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
 import azkaban.utils.Utils;
+import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.log4j.Logger;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class JavaProcessJob extends ProcessJob {
   public static final String CLASSPATH = "classpath";
@@ -40,12 +41,16 @@ public class JavaProcessJob extends ProcessJob {
 
   public static final String DEFAULT_INITIAL_MEMORY_SIZE = "64M";
   public static final String DEFAULT_MAX_MEMORY_SIZE = "256M";
-
   public static String JAVA_COMMAND = "java";
+  // jar directory
+  public static String JAR_DIR = "/tmp/jars/";
+  protected ClassPathUtils classPathUtils;
+
 
   public JavaProcessJob(String jobid, Props sysProps, Props jobProps,
-      Logger logger) {
+                        Logger logger) {
     super(jobid, sysProps, jobProps, logger);
+    classPathUtils = new ClassPathUtils();
   }
 
   @Override
@@ -80,15 +85,15 @@ public class JavaProcessJob extends ProcessJob {
     return "-cp " + createArguments(classPath, ":") + " ";
   }
 
-  protected List<String> getClassPaths() {
 
+  protected List<String> getClassPaths() {
     List<String> classPaths = getJobProps().getStringList(CLASSPATH, null, ",");
 
-    ArrayList<String> classpathList = new ArrayList<String>();
+    ArrayList<String> classpathList = new ArrayList<>();
+
     // Adding global properties used system wide.
     if (getJobProps().containsKey(GLOBAL_CLASSPATH)) {
-      List<String> globalClasspath =
-          getJobProps().getStringList(GLOBAL_CLASSPATH);
+      List<String> globalClasspath = getJobProps().getStringList(GLOBAL_CLASSPATH);
       for (String global : globalClasspath) {
         getLog().info("Adding to global classpath:" + global);
         classpathList.add(global);
@@ -99,9 +104,9 @@ public class JavaProcessJob extends ProcessJob {
       File path = new File(getPath());
       // File parent = path.getParentFile();
       getLog().info(
-          "No classpath specified. Trying to load classes from " + path);
+              "No classpath specified. Trying to load classes from " + path);
 
-      if (path != null) {
+      if (path.exists() && path.listFiles() != null) {
         for (File file : path.listFiles()) {
           if (file.getName().endsWith(".jar")) {
             // log.info("Adding to classpath:" + file.getName());
@@ -110,7 +115,15 @@ public class JavaProcessJob extends ProcessJob {
         }
       }
     } else {
-      classpathList.addAll(classPaths);
+      getLog().info("Found additional class paths. Loading class paths from local or S3 to azkaban");
+      // set up the hadoop configs for hadoop file system
+      try {
+        List<String> pathList = classPathUtils.getFromLocalOrS3Concurrent(classPaths, getPath(), JAR_DIR, jobProps);
+        classpathList.addAll(pathList);
+        getLog().info("classpath output: " + classpathList);
+      } catch (RuntimeException e) {
+        getLog().error("IO exception from setting hadoop configuration - Error: " + ExceptionUtils.getStackTrace(e));
+      }
     }
 
     return classpathList;
@@ -118,7 +131,7 @@ public class JavaProcessJob extends ProcessJob {
 
   protected String getInitialMemorySize() {
     return getJobProps().getString(INITIAL_MEMORY_SIZE,
-        DEFAULT_INITIAL_MEMORY_SIZE);
+            DEFAULT_INITIAL_MEMORY_SIZE);
   }
 
   protected String getMaxMemorySize() {
