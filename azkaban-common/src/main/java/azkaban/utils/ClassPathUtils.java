@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -100,7 +101,7 @@ public class ClassPathUtils {
    */
   protected File getLocalFile(String path) {
     File file = new File(path);
-    return file != null && file.isFile() ? file : null;
+    return file.exists() && file.isFile() ? file : null;
   }
 
   /**
@@ -111,8 +112,7 @@ public class ClassPathUtils {
    * @return
    */
   protected Boolean checkIfLocal(String dir, String path) {
-    File localFile = getLocalFile(dir, path);
-    return localFile != null && localFile.exists();
+    return Paths.get(dir, path).toFile().isFile();
   }
 
   /**
@@ -122,10 +122,16 @@ public class ClassPathUtils {
    * @return
    */
   protected Boolean checkIfLocal(String path) {
-    File localFile = getLocalFile(path);
-    return localFile != null && localFile.exists();
+    return Paths.get(path).toFile().isFile();
   }
 
+  /**
+   * Check if it's a s3 path
+   *
+   * @param path
+   * @return
+   * @throws URISyntaxException
+   */
   protected Boolean checkIfS3(String path) throws URISyntaxException {
     URI inputPath = new URI(path);
 
@@ -134,6 +140,16 @@ public class ClassPathUtils {
     return (scheme != null && (scheme.equals("s3") || scheme.equals("s3a")));
   }
 
+  /**
+   * Download from s3 paths defined in props
+   *
+   * @param path
+   * @param jar_dir
+   * @param props
+   * @return
+   * @throws URISyntaxException
+   * @throws IOException
+   */
   protected List<String> downloadFromS3(String path, String jar_dir, Props props) throws URISyntaxException, IOException {
     // Convert the path into a local path
     URI inputPath = new URI(path);

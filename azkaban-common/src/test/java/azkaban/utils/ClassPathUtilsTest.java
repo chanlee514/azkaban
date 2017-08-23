@@ -92,15 +92,12 @@ public class ClassPathUtilsTest {
 
     // similar to testCheckIfLocalPath(), check the existence of a local or non-local file
     // valid file scenarios
-    Assert.assertTrue(classPathUtils.getLocalFile(localFileAbsolutePath).equals(localFile));
     Assert.assertTrue(classPathUtils.getLocalFile("", localFileAbsolutePath).equals(localFile));
     Assert.assertTrue(classPathUtils.getLocalFile(localFile.getParent(), localFile.getName()).equals(localFile));
     // invalid invalid scenarios
     Assert.assertNull(classPathUtils.getLocalFile(localFile.getParent() + "1", localFile.getName()));
     Assert.assertNull(classPathUtils.getLocalFile(localFile.getParent() + "1", localFileAbsolutePath));
     Assert.assertNull(classPathUtils.getLocalFile("", invalidLocalPath));
-    Assert.assertNull(classPathUtils.getLocalFile(invalidLocalPath));
-    Assert.assertNull(classPathUtils.getLocalFile(s3aClassPath));
 
   }
 
