@@ -42,6 +42,10 @@ public class JobTypeManager {
   private final String jobTypePluginDir; // the dir for jobtype plugins
   private final ClassLoader parentLoader;
 
+  // create separate key unique to this class that represents the plugin dir key
+  // this is so "commons" does not have to depend on execserver
+  public static final String JOBTYPE_PLUGIN_DIR = "jobtypemanager.plugin.dir";
+
   public static final String DEFAULT_JOBTYPEPLUGINDIR = "plugins/jobtypes";
   // need jars.to.include property, will be loaded with user property
   private static final String JOBTYPECONFFILE = "plugin.properties";
@@ -361,6 +365,8 @@ public class JobTypeManager {
         if(pluginLoadProps == null)
           pluginLoadProps = new Props();
       }
+
+      pluginLoadProps.put(JOBTYPE_PLUGIN_DIR, this.jobTypePluginDir);
 
       job =
           (Job) Utils.callConstructor(executorClass, jobId, pluginLoadProps,
