@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import azkaban.jobExecutor.loaders.DependencyLoader;
 import azkaban.jobExecutor.loaders.RemoteDependencyLoader;
+import azkaban.jobExecutor.utils.process.ProcessFailureException;
 import org.apache.log4j.Logger;
 
 import azkaban.flow.CommonJobProperties;
@@ -188,6 +189,11 @@ public class ProcessJob extends AbstractProcessJob {
       try {
         this.process.run();
         success = true;
+      } catch (ProcessFailureException e) {
+        for (File file : propFiles)
+          if (file != null && file.exists())
+            file.delete();
+        throw e;
       } catch (Throwable e) {
         for (File file : propFiles)
           if (file != null && file.exists())

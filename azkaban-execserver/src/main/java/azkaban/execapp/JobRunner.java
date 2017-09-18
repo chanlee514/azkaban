@@ -26,6 +26,7 @@ import azkaban.flow.CommonJobProperties;
 import azkaban.jobExecutor.AbstractProcessJob;
 import azkaban.jobExecutor.JavaProcessJob;
 import azkaban.jobExecutor.Job;
+import azkaban.jobExecutor.utils.process.ProcessFailureException;
 import azkaban.jobtype.JobTypeManager;
 import azkaban.jobtype.JobTypeManagerException;
 import azkaban.utils.Props;
@@ -572,20 +573,31 @@ public class JobRunner extends EventHandler implements Runnable {
         StringUtils.join2(node.getInNodes(), ","));
   }
 
+  private void setStatusFailed(Throwable e) {
+    if (props.getBoolean("job.succeed.on.failure", false)) {
+      changeStatus(Status.FAILED_SUCCEEDED);
+      logError("Job run failed, but will treat it like success.");
+      logError(e.getMessage() + " cause: " + e.getCause(), e);
+    } else {
+      changeStatus(Status.FAILED);
+      logError("Job run failed!", e);
+      logError(e.getMessage() + " cause: " + e.getCause());
+    }
+  }
+
   private void runJob() {
     try {
       job.run();
-    } catch (Throwable e) {
-
-      if (props.getBoolean("job.succeed.on.failure", false)) {
-        changeStatus(Status.FAILED_SUCCEEDED);
-        logError("Job run failed, but will treat it like success.");
-        logError(e.getMessage() + " cause: " + e.getCause(), e);
-      } else {
-        changeStatus(Status.FAILED);
-        logError("Job run failed!", e);
-        logError(e.getMessage() + " cause: " + e.getCause());
+    } catch (ProcessFailureException e) {
+      if (e.getExitCode() == Status.SKIPPED.getNumVal()) {
+        logInfo("job skipped");
+        node.setStatus(Status.SKIPPED);
       }
+      else {
+        setStatusFailed(e);
+      }
+    } catch (Throwable e) {
+      setStatusFailed(e);
     }
 
     if (job != null) {
