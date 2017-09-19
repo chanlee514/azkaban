@@ -20,7 +20,13 @@ import java.io.IOException;
 import java.io.File;
 import java.util.Date;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import azkaban.jobExecutor.loaders.DependencyLoader;
+import azkaban.jobExecutor.loaders.RemoteDependencyLoader;
+import azkaban.jobExecutor.loaders.utils.S3FileDownloader;
+import azkaban.jobExecutor.loaders.utils.TestFileDownloader;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -159,4 +165,46 @@ public class JavaProcessJobTest {
       Assert.assertTrue(true);
     }
   }
+
+  @Test
+  public void testLoaderAddsClassPaths() throws Exception {
+    File localFile = classTemp.newFile("someLocalFile1.jar");
+    localFile.createNewFile();
+    props.put(JavaProcessJob.JAVA_CLASS,
+            "azkaban.jobExecutor.WordCountLocal");
+    props.put("input", errorInputFile);
+    props.put("output", outputFile);
+    props.put("classpath", classPaths);
+    props.put(ProcessJob.EXTERNAL_DEPENDENCIES_URLS, "s3://blah/someThing.jar,s3://blah/testFile.jar," + localFile.getAbsolutePath());
+    props.put(DependencyLoader.UNIQUE_FILE_DOWNLOAD, "false");
+    RemoteDependencyLoader remoteLoader = new RemoteDependencyLoader(props, ProcessJob.EXTERNAL_DEPENDENCIES_URLS, job.getPath());
+    remoteLoader.setDownloader("s3", new TestFileDownloader());
+    job.setLoader(remoteLoader);
+
+    job.run();
+    Assert.assertEquals(job.externalFiles.size(), 3);
+    String tmpDir = DependencyLoader.getTempDirectory(props);
+    Assert.assertTrue(job.getClassPaths().get(1).contains(tmpDir));
+    Assert.assertTrue(job.externalFiles.contains(tmpDir + "/someThing.jar"));
+    Assert.assertTrue(job.externalFiles.contains(tmpDir + "/testFile.jar"));
+    Assert.assertTrue(job.externalFiles.contains(tmpDir + "/someLocalFile1.jar"));
+
+    // Make sure command line is built properly
+    Pattern classPathPattern = Pattern.compile("(\\-cp\\W)('.*')");
+    Matcher classPathMatcher = classPathPattern.matcher(job.createCommandLine());
+    Assert.assertTrue(classPathMatcher.find());
+    String classPath = classPathMatcher.group(2);
+    Assert.assertTrue(classPath.startsWith("'"));
+    Assert.assertTrue(classPath.endsWith("'"));
+  }
+
+  @Test
+  public void testDownloaderCanFindS3Files() throws Exception {
+    S3FileDownloader downloader = new S3FileDownloader();
+
+    String[] bucketKey = downloader.bucketAndKey("bucket/key");
+    Assert.assertEquals(bucketKey[0], "bucket");
+    Assert.assertEquals(bucketKey[1], "key");
+  }
+
 }

@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import azkaban.jobExecutor.loaders.DependencyLoader;
+import azkaban.jobExecutor.loaders.RemoteDependencyLoader;
+import azkaban.jobExecutor.utils.process.ProcessFailureException;
 import org.apache.log4j.Logger;
 
 import azkaban.flow.CommonJobProperties;
@@ -55,6 +58,11 @@ public class ProcessJob extends AbstractProcessJob {
       "execute.as.user.override";
   public static final String USER_TO_PROXY = "user.to.proxy";
   public static final String KRB5CCNAME = "KRB5CCNAME";
+  public static final String EXTERNAL_DEPENDENCIES_URLS = "dependencies";
+
+  protected List<String> externalFiles = new ArrayList();
+
+  public DependencyLoader loader;
 
   public ProcessJob(final String jobId, final Props sysProps,
       final Props jobProps, final Logger log) {
@@ -63,6 +71,22 @@ public class ProcessJob extends AbstractProcessJob {
     // this is in line with what other job types (hadoopJava, spark, pig, hive)
     // is doing
     jobProps.put(CommonJobProperties.JOB_ID, jobId);
+    if (loader == null) {
+      loader = new RemoteDependencyLoader(getJobProps(), EXTERNAL_DEPENDENCIES_URLS, getPath());
+    }
+  }
+
+  public void setLoader(DependencyLoader loader) {
+    this.loader = loader;
+  }
+
+  public DependencyLoader getLoader() {
+    return loader;
+  }
+
+  @Override
+  public List<String> getFiles() {
+    return loader.getDependencies();
   }
 
   @Override
@@ -71,6 +95,13 @@ public class ProcessJob extends AbstractProcessJob {
       resolveProps();
     } catch (Exception e) {
       handleError("Bad property definition! " + e.getMessage(), e);
+    }
+
+    // Get any required files
+    try {
+      externalFiles = getFiles();
+    } catch (Exception e) {
+      handleError("Unable to get files for job " + e.getMessage(), e);
     }
 
     if (sysProps.getBoolean(MEMCHECK_ENABLED, true)
@@ -158,6 +189,11 @@ public class ProcessJob extends AbstractProcessJob {
       try {
         this.process.run();
         success = true;
+      } catch (ProcessFailureException e) {
+        for (File file : propFiles)
+          if (file != null && file.exists())
+            file.delete();
+        throw e;
       } catch (Throwable e) {
         for (File file : propFiles)
           if (file != null && file.exists())
@@ -289,6 +325,8 @@ public class ProcessJob extends AbstractProcessJob {
   public String getPath() {
     return _jobPath == null ? "" : _jobPath;
   }
+
+
 
   /**
    * Splits the command into a unix like command line structure. Quotes and
