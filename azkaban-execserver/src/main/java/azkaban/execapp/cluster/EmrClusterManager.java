@@ -320,7 +320,9 @@ public class EmrClusterManager implements IClusterManager, EventListener {
                         }
                     }
 
+                    classLogger.info("Before calling EmrUtils.findClusterByName for clusterName: " + clusterName + " flowId: " + flow.getId());
                     ClusterSummary runningCluster = EmrUtils.findClusterByName(getEmrClient(), clusterName, EmrUtils.RUNNING_STATES);
+                    classLogger.info("After calling EmrUtils.findClusterByName for clusterName: " + clusterName + " flowId: " + flow.getId());
 
                     if (runningCluster != null) {
                         jobLogger.info("Found cluster " + clusterName + " - Id: " + runningCluster.getId() + ", Status: " + runningCluster.getStatus());

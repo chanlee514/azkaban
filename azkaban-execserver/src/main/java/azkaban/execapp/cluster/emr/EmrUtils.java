@@ -127,7 +127,7 @@ public class EmrUtils {
             }
         }
 
-        if (res.getClusters().size() == 50) { // TODO: use a different method to detect if more results
+        if (res.getMarker() != null) {
             return findClusterByName(emrClient, clusterName, clusterStates, res.getMarker());
         }
         return null;
