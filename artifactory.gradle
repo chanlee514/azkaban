@@ -61,19 +61,19 @@ allprojects {
     repositories {
         mavenLocal()
         maven {
-            url "${artifactory_contextUrl}/libs-releases"
+            url "${artifactory_contextUrl}/libs-release"
             credentials artifactoryCredentials
         }
         maven {
-            url "${artifactory_contextUrl}/libs-snapshots"
+            url "${artifactory_contextUrl}/libs-snapshot"
             credentials artifactoryCredentials
         }
         maven {
-            url "${artifactory_contextUrl}/plugins-releases"
+            url "${artifactory_contextUrl}/plugins-release"
             credentials artifactoryCredentials
         }
         maven {
-            url "${artifactory_contextUrl}/plugins-snapshots"
+            url "${artifactory_contextUrl}/plugins-snapshot"
             credentials artifactoryCredentials
         }
     }
