@@ -29,6 +29,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import azkaban.utils.VersionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -66,6 +67,7 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
   public static final String JSON_MIME_TYPE = "application/json";
 
   protected static final WebUtils utils = new WebUtils();
+  protected static VersionUtils versionUtils;
 
   private AzkabanServer application;
   private String name;
@@ -106,6 +108,8 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
       triggerPlugins =
           new ArrayList<TriggerPlugin>(server.getTriggerPlugins().values());
     }
+
+    versionUtils = new VersionUtils(props);
   }
 
   /**
@@ -331,6 +335,7 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
     page.add("azkaban_label", label);
     page.add("azkaban_color", color);
     page.add("utils", utils);
+    page.add("versionUtils", versionUtils);
     page.add("timezone", ZONE_FORMATTER.print(System.currentTimeMillis()));
     page.add("currentTime", (new DateTime()).getMillis());
     if (session != null && session.getUser() != null) {
@@ -380,6 +385,7 @@ public abstract class AbstractAzkabanServlet extends HttpServlet {
     page.add("azkaban_name", name);
     page.add("azkaban_label", label);
     page.add("azkaban_color", color);
+    page.add("versionUtils", versionUtils);
     page.add("timezone", ZONE_FORMATTER.print(System.currentTimeMillis()));
     page.add("currentTime", (new DateTime()).getMillis());
     page.add("context", req.getContextPath());

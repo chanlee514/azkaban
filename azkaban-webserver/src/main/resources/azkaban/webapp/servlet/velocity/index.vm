@@ -167,7 +167,7 @@
 
     </div><!-- /container -->
   <div class="footer">
-      $utils.getFooter()
+      $versionUtils.getVersionDetails(), uptime=$utils.getUpTime()
   </div>
   </body>
 </html>

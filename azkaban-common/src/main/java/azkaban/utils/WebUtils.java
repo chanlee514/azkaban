@@ -172,14 +172,4 @@ public class WebUtils {
   public String getUpTime() {
     return formatDuration(applicationStartTime, System.currentTimeMillis());
   }
-
-  public String getVersion() {
-      Package azkaban = Package.getPackage("azkaban.utils");
-      if (azkaban != null) return azkaban.getImplementationVersion();
-      return "N/A";
-  }
-  public String getFooter() {
-
-      return "Azkaban version: " + getVersion() + " uptime: " + getUpTime();
-  }
 }

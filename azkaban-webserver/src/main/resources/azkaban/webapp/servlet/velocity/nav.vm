@@ -29,6 +29,9 @@
         <div class="navbar-left navbar-enviro">
           <div class="navbar-enviro-name">${azkaban_name}</div>
           <div class="navbar-enviro-server">${azkaban_label}</div>
+          #if ($versionUtils.getVersion() != 'N/A')
+            <div class="navbar-enviro-server">$versionUtils.getVersion()</div>
+          #end
         </div>
         <div class="navbar-collapse collapse">
 #if ($navbar_disabled != 1)
