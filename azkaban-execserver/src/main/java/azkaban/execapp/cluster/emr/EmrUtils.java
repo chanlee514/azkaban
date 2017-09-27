@@ -144,17 +144,6 @@ public class EmrUtils {
         return Optional.empty();
     }
 
-    public static Optional<String> getClusterLogURI(AmazonElasticMapReduceClient emrClient, String clusterId) {
-        if (clusterId != null) {
-            DescribeClusterRequest req = new DescribeClusterRequest().withClusterId(clusterId);
-            DescribeClusterResult res = emrClient.describeCluster(req);
-            if (res.getCluster() != null) {
-                return Optional.of(res.getCluster().getLogUri());
-            }
-        }
-        return Optional.empty();
-    }
-
     public static boolean terminateCluster(AmazonElasticMapReduceClient emrClient, String clusterId) {
         if (clusterId != null) {
             emrClient.terminateJobFlows(new TerminateJobFlowsRequest(Collections.singletonList(clusterId)));

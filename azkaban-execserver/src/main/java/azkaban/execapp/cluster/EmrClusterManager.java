@@ -67,9 +67,6 @@ public class EmrClusterManager implements IClusterManager, EventListener {
     // Cluster Id -> Cluster Master Node Ip - track IP address of each cluster's master node to avoid calls to EMR api (rate limit)
     private final Map<String, String> clusterMasterIps = new ConcurrentHashMap<String, String>();
 
-    // Cluster Id -> Cluster Log URI - track Log URI of each cluster
-    private final Map<String, String> clusterLogURIs = new ConcurrentHashMap<>();
-
     // (Item is Cluster Id) - List of clusters to keep alive - when multiple flows share the same cluster, if any of the flows indicate that the cluster should not be shutdown (because of an error or any other reason), the cluster should not be terminated even if it's ok to be terminated by the other flows using it.
     private final List<String> clustersKeepAlive = Collections.synchronizedList(new ArrayList<String>());
 
@@ -202,11 +199,6 @@ public class EmrClusterManager implements IClusterManager, EventListener {
                     setClusterId(flow, clusterId, jobLogger);
                 }
 
-                clusterLogURI = getClusterLogURICached(clusterId);
-                if (clusterLogURI.isPresent()) {
-                    setClusterLogURI(flow, clusterLogURI.get(), jobLogger);
-                }
-
                 break;
 
             case CREATE_CLUSTER:
@@ -242,10 +234,6 @@ public class EmrClusterManager implements IClusterManager, EventListener {
                     if (clusterId != null && masterIp.isPresent()) {
                         setFlowMasterIp(flow, masterIp.get(), jobLogger);
                         setClusterId(flow, clusterId, jobLogger);
-
-                        if (clusterLogURI.isPresent()) {
-                            setClusterLogURI(flow, clusterLogURI.get(), jobLogger);
-                        }
 
                         updateFlow(flow);
 
@@ -577,19 +565,6 @@ public class EmrClusterManager implements IClusterManager, EventListener {
         return masterIp;
     }
 
-    public Optional<String> getClusterLogURICached(String clusterId) {
-        if (clusterLogURIs.containsKey(clusterId)) {
-            return Optional.of(clusterLogURIs.get(clusterId));
-        }
-
-        Optional<String> logURI = getClusterLogURI(getEmrClient(), clusterId);
-        if (logURI.isPresent()) {
-            clusterLogURIs.put(clusterId, logURI.get());
-        }
-
-        return logURI;
-    }
-
     private void updateFlow(ExecutableFlow flow) throws ExecutorManagerException {
         flow.setUpdateTime(System.currentTimeMillis());
         if (executorLoader == null) executorLoader = AzkabanExecutorServer.getApp().getExecutorLoader();
@@ -629,11 +604,6 @@ public class EmrClusterManager implements IClusterManager, EventListener {
     public void setClusterId(ExecutableFlow flow, String clusterId, Logger jobLogger) {
         jobLogger.info("Updating cluster id with " + clusterId);
         flow.getInputProps().put("emr-inject.cluster.id", clusterId);
-    }
-
-    public void setClusterLogURI(ExecutableFlow flow, String clusterLogPath, Logger jobLogger) {
-        jobLogger.info("Updating cluster id with " + clusterLogPath);
-        flow.getInputProps().put("emr-inject.cluster.log.uri", clusterLogPath);
     }
 
     private Props propsFromMap(Map<String, Object> map) {
