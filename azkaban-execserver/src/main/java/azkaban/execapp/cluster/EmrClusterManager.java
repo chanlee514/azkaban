@@ -24,6 +24,8 @@ import net.jodah.expiringmap.ExpiringMap;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -41,6 +43,8 @@ public class EmrClusterManager implements IClusterManager, EventListener {
     private static final String EMR_CONF_TERMINATE_ERROR = "cluster.emr.terminate.error";
     private static final String EMR_CONF_TERMINATE_COMPLETION = "cluster.emr.terminate.completion";
     private static final String EMR_CONF_SELECT_ID = "cluster.emr.select.id";
+    private static final String EMR_CONF_SHARED_CLUSTER_ENABLE = "cluster.emr.shared.enable";
+    private static final String EMR_CONF_SHARED_CLUSTER_MASTER = "cluster.emr.shared.master";
     private static final String EMR_CONF_NAME_STRATEGY = "cluster.emr.name.strategy"; // see ClusterNameStrategy enum for possible values
     private static final String EMR_CONF_SPOOLUP_TIMEOUT = "cluster.emr.spoolup.timeout";
     private static final String EMR_CONF_APP_CONFIGURATION_S3_PATH = "cluster.emr.app.configuration.s3.path";
@@ -110,6 +114,10 @@ public class EmrClusterManager implements IClusterManager, EventListener {
     }
 
     ExecutionMode getFlowExecutionMode(Props combinedProps, Logger logger) {
+        if (combinedProps.getBoolean(EMR_CONF_SHARED_CLUSTER_ENABLE)) {
+            return ExecutionMode.SHARED_CLUSTER;
+        }
+
         if (combinedProps.get(EMR_CONF_SELECT_ID) != null) {
             String clusterId = combinedProps.getString(EMR_CONF_SELECT_ID);
             logger.info(EMR_CONF_SELECT_ID + " was set to " + clusterId + ". Trying to use specific cluster to run this flow.");
@@ -185,18 +193,40 @@ public class EmrClusterManager implements IClusterManager, EventListener {
         setClusterProperty(flow, EMR_INTERNAL_EXECUTION_MODE, executionMode.toString());
 
         int spoolUpTimeoutInMinutes = combinedProps.getInt(EMR_CONF_SPOOLUP_TIMEOUT, 25);
-        String clusterId = null;
+        Optional<String> clusterId = Optional.empty();
         String clusterName = null;
         Optional<String> masterIp = Optional.empty();
         Optional<String> clusterLogURI = Optional.empty();
 
         switch (executionMode) {
+            case SHARED_CLUSTER:
+                String masterHostName = globalProps.getString(EMR_CONF_SHARED_CLUSTER_MASTER);
+
+                try {
+                    URL masterUrl = new URL("http://" + masterHostName + ":9090");
+                    clusterId = EmrUtils.getClusterIdFromMaster(masterUrl);
+                    if (clusterId.isPresent()) {
+                        setFlowMasterIp(flow, masterHostName, jobLogger);
+                        setClusterId(flow, clusterId.get(), jobLogger);
+                    } else {
+                        jobLogger.error("Failed to find shared cluster ID");
+                    }
+                } catch (MalformedURLException e) {
+                    jobLogger.error("unable to fetch cluster ID from master", e);
+                }
+
+                break;
+
             case SPECIFIC_CLUSTER:
-                clusterId = combinedProps.getString(EMR_CONF_SELECT_ID);
-                masterIp = getMasterIPCached(clusterId);
-                if (masterIp.isPresent()) {
-                    setFlowMasterIp(flow, masterIp.get(), jobLogger);
-                    setClusterId(flow, clusterId, jobLogger);
+                clusterId = Optional.of(combinedProps.getString(EMR_CONF_SELECT_ID));
+                if (clusterId.isPresent()) {
+                    masterIp = getMasterIPCached(clusterId.get());
+                    if (masterIp.isPresent()) {
+                        setFlowMasterIp(flow, masterIp.get(), jobLogger);
+                        setClusterId(flow, clusterId.get(), jobLogger);
+                    }
+                } else {
+                    jobLogger.error("No cluster ID defined in configuration");
                 }
 
                 break;
@@ -214,15 +244,15 @@ public class EmrClusterManager implements IClusterManager, EventListener {
                     while (clusterAttempt++ < totalClusterAttempts && (clusterId == null || !masterIp.isPresent())){
                         jobLogger.info("Creating or getting cluster with name: " + clusterName + " and obtaining ip (attempt " + clusterAttempt + "/" + totalClusterAttempts + ")");
 
-                        clusterId = getOrCreateClusterByName(flow, jobLogger, combinedProps, clusterName);
+                        clusterId = Optional.of(getOrCreateClusterByName(flow, jobLogger, combinedProps, clusterName));
 
-                        if (clusterId != null) {
+                        if (clusterId.isPresent()) {
                             jobLogger.info("Getting ip for cluster with id: " + clusterId);
-                            masterIp = blockUntilReadyAndReturnMasterIp(clusterId, spoolUpTimeoutInMinutes, jobLogger);
+                            masterIp = blockUntilReadyAndReturnMasterIp(clusterId.get(), spoolUpTimeoutInMinutes, jobLogger);
 
                             if(!masterIp.isPresent()) {
                                 jobLogger.error("Timed out waiting " + spoolUpTimeoutInMinutes + " minutes for cluster to start. Shutting down cluster " + clusterId);
-                                shutdownCluster(clusterName, clusterId, jobLogger);
+                                shutdownCluster(clusterName, clusterId.get(), jobLogger);
                             } else {
                                 jobLogger.info("Obtained ip for cluster " + clusterId);
                                 break;
@@ -231,16 +261,16 @@ public class EmrClusterManager implements IClusterManager, EventListener {
                     }
 
                     // By now if we don't have a cluster id, I give up my friend
-                    if (clusterId != null && masterIp.isPresent()) {
+                    if (clusterId.isPresent() && masterIp.isPresent()) {
                         setFlowMasterIp(flow, masterIp.get(), jobLogger);
-                        setClusterId(flow, clusterId, jobLogger);
+                        setClusterId(flow, clusterId.get(), jobLogger);
 
                         updateFlow(flow);
 
                     } else {
                         jobLogger.error("Failed all attempts to find and/or start cluster: " + clusterName);
 
-                        shutdownCluster(clusterName, clusterId, jobLogger);
+                        shutdownCluster(clusterName, clusterId.get(), jobLogger);
                         updateFlow(flow);
                         return false;
                     }
@@ -653,7 +683,8 @@ public class EmrClusterManager implements IClusterManager, EventListener {
     private enum ExecutionMode {
         DEFAULT_CLUSTER,
         CREATE_CLUSTER,
-        SPECIFIC_CLUSTER
+        SPECIFIC_CLUSTER,
+        SHARED_CLUSTER
     }
 
     private enum ClusterNameStrategy {

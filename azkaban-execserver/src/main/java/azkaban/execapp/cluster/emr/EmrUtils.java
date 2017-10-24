@@ -11,6 +11,13 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.*;
@@ -98,6 +105,8 @@ public class EmrUtils {
 
     private static final AtomicReference<EC2Zone> CURRENT_ZONE = new AtomicReference<>(EC2Zone.A);
 
+    private static final CloseableHttpClient httpclient = HttpClients.createDefault();
+
 
     public static Cluster findClusterById(AmazonElasticMapReduceClient emrClient, String clusterId) {
         return emrClient.describeCluster(new DescribeClusterRequest().withClusterId(clusterId)).getCluster();
@@ -131,6 +140,28 @@ public class EmrUtils {
             return findClusterByName(emrClient, clusterName, clusterStates, res.getMarker());
         }
         return null;
+    }
+
+    private static ResponseHandler<String> clusterIdResponseHandler = response -> {
+        int status = response.getStatusLine().getStatusCode();
+        if (status >= 200 && status < 300) {
+            HttpEntity entity = response.getEntity();
+            return entity != null ? EntityUtils.toString(entity) : null;
+        } else {
+            throw new ClientProtocolException("Unexpected response status: " + status);
+        }
+    };
+
+    public static Optional<String> getClusterIdFromMaster(URL masterUrl) {
+        HttpGet get = new HttpGet(masterUrl.toString());
+
+        try {
+            return Optional.of(httpclient.execute(get, clusterIdResponseHandler));
+        } catch (IOException e) {
+            logger.warn("Failed to get cluster ID from master", e);
+        }
+
+        return Optional.empty();
     }
 
     public static Optional<String> getMasterIP(AmazonElasticMapReduceClient emrClient, String clusterId) {
