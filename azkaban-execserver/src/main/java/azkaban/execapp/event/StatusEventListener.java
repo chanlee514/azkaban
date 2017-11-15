@@ -7,7 +7,11 @@ import azkaban.executor.Status;
 import azkaban.utils.Props;
 import azkaban.utils.RestfulApiClient;
 import org.apache.log4j.Logger;
+import org.apache.http.client.HttpResponseException;
+import org.apache.http.StatusLine;
+import org.apache.http.util.EntityUtils;
 import status.Types;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
@@ -15,6 +19,38 @@ import java.util.Map;
 import com.google.gson.JsonObject;
 
 import static azkaban.executor.Status.SUCCEEDED;
+
+public class StatusApiClient extends RestfulApiClient {
+
+    // Deserialize HttpResponse body. Copied from ExecutorApiClient.java
+    @Override
+    protected String parseResponse(HttpResponse response)
+            throws HttpResponseException, IOException {
+
+        final StatusLine statusLine = response.getStatusLine();
+        String responseBody = response.getEntity() != null ?
+            EntityUtils.toString(response.getEntity()) : "";
+
+        if (statusLine.getStatusCode() >= 300) {
+            logger.error(String.format("unable to parse response as the response status is %s",
+                statusLine.getStatusCode()));
+
+            throw new HttpResponseException(statusLine.getStatusCode(),responseBody);
+        }
+        return responseBody;
+    }
+
+    // Wrapper for sending JSON POST request
+    public static void postRequest(URI uri, JsonObject json) {
+
+        // Set HTTP header
+        List<NameValuePair> headerEntries = new ArrayList <NameValuePair>();
+        headerEntries.add(new BasicNameValuePair("Accept", "application/json"));
+        headerEntries.add(new BasicNameValuePair("Content-Type", "application/json"));
+
+        String response = this.httpPost(uri, headerEntries, json.toString());
+    }
+}
 
 public class StatusEventListener implements EventListener {
 
@@ -119,14 +155,14 @@ public class StatusEventListener implements EventListener {
         sendEvent(logger, runner, tenantId, type, tags, results, status);
     }
 
-    private JsonObject sendEvent(
+    private void sendEvent(
             Logger logger,
             JobRunner runner,
             String tenantId,
             String type,
             Map<String, String> tags,
             Map<String, String> results,
-            String status) {
+            String status) throws IOException {
 
         logger.info("Status - Send Event - Tenant: " + tenantId + ", Type: " +
             type + ", Status: " + status + ", Tags: " + tags + ", Results: " + results);
@@ -146,16 +182,22 @@ public class StatusEventListener implements EventListener {
             return null;
         }
 
+        // Define uri
         String env = runner.getProps().get(STATUS_ENVIRONMENT);
         String host = "ec-platform-status-" + env + ".sfiqplatform.com";
         int port = 80;
         String path = "/api/events/save";
+        URI uri = StatusApiClient.buildUri(host, port, path,
+            true, paramList.toArray(new Pair[0]));
 
+        // Create JSON for event
         JsonObject json = this.newEventJson(
             type, status, tenantId, tags, results);
 
-        // TODO send REST POST call using org.apache.http.client.HttpClient
-
+        // Send POST request
+        StatusApiClient client = new StatusApiClient();
+        String response = client.postRequest(uri, json);
+        logger.info(String.format("Received response %s", response));
         return response;
     }
 
@@ -174,7 +216,7 @@ public class StatusEventListener implements EventListener {
      *   "tenantId": {"name": "tenant1"}
      * }
      * 
-     * @return JsonObject
+     * @return GSON JsonObject
      */
     private JsonObject newEventJson(
             String type,
