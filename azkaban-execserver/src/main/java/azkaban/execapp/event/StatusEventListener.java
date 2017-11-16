@@ -22,7 +22,6 @@ import org.apache.log4j.Logger;
 
 import static azkaban.executor.Status.SUCCEEDED;
 
-
 public class StatusEventListener implements EventListener {
 
   private static final Logger listenerLogger = Logger
@@ -125,6 +124,9 @@ public class StatusEventListener implements EventListener {
     sendEvent(logger, runner, tenantId, type, tags, results, status);
   }
 
+  /**
+   * Sends new event to ALM Status Service
+   **/
   private void sendEvent(
       Logger logger,
       JobRunner runner,
@@ -156,7 +158,10 @@ public class StatusEventListener implements EventListener {
     String env = runner.getProps().get(STATUS_ENVIRONMENT);
     String host = "ec-platform-status-" + env + ".sfiqplatform.com";
     int port = 80;
+
+    // For local testing
     if (env.equalsIgnoreCase("local")) {
+      logger.info("Running in local mode...");
       host = "localhost";
       port = 8081;
     }
@@ -168,22 +173,23 @@ public class StatusEventListener implements EventListener {
         true, paramsList.toArray(new Pair[0]));
 
     // Create JSON for event
-    JsonObject json = this.newEventJson(
+    JsonObject json = newEventJson(
         type, status, tenantId, tags, results);
+
+    logger.info(String.format("* Sending POST request with JSON: %s", json.toString()));
 
     // Send POST request
     StatusApiClient client = new StatusApiClient();
     String response = client.postRequest(uri, json);
 
     // Log response
-    logger.info(String.format("*** Received response %s", response));
+    logger.info(String.format("* Received response %s", response));
   }
 
   /**
-   * Private helper method to create event JsonObject
-   * For use in calling status service REST API
+   * Private helper method to generate JsonObject for status event
    * 
-   * Event class (protobuf generated) looks like this:
+   * Json for Event object should like this:
    * {
    *   "id": {"name": "5ff38550-e976-4fb6-889a-46dcd508f6a8"},
    *   "type": {"name": "modeling_job"},
@@ -203,34 +209,36 @@ public class StatusEventListener implements EventListener {
       Map<String, String> tags,
       Map<String, String> results) {
 
+    Gson gson = new GsonBuilder().create();
+
     JsonObject json = new JsonObject();
 
     // Generate random UUID
     String randomId = java.util.UUID.randomUUID().toString();
-    json.addProperty("id", withName(randomId));
+    json.add("id", withName(randomId));
 
     // Current time in ISO-8601 representation
     json.addProperty("createdAt", Instant.now().toString());
 
-    json.addProperty("type", withName(type));
+    json.add("type", withName(type));
 
     json.addProperty("status", status);
 
-    json.addProperty("tenantId", withName(tenantId));
+    json.add("tenantId", withName(tenantId));
 
     // Convert java Hashmap to String and add to JsonObject
-    Gson gson = new GsonBuilder().create();
+    json.add("tags", gson.toJsonTree(tags).getAsJsonObject());
 
-    json.addProperty("tags", gson.toJson(tags));
-
-    json.addProperty("results", gson.toJson(results));
+    json.add("results", gson.toJsonTree(results).getAsJsonObject());
 
     return json;
   }
 
   // Helper method for generating json string
-  private static String withName(String s) {
-    return String.format("{\"name\": \"%s\"}", s);
+  private static JsonObject withName(String s) {
+    JsonObject obj = new JsonObject();
+    obj.addProperty("name", s);
+    return obj;
   }
 
   /*

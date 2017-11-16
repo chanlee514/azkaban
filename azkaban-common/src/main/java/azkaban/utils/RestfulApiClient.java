@@ -230,7 +230,8 @@ public abstract class RestfulApiClient<T> {
       // dump the post body UTF-8 will be used as the default encoding type.
       if (null != postingBody && postingBody.length() > 0){
         HttpEntity entity = new ByteArrayEntity(postingBody.getBytes("UTF-8"));
-        request.setHeader("Content-Length",  Long.toString(entity.getContentLength()));
+        // Commenting this out, as this causes "ProtocolException: Content-Length header already present"
+        // request.setHeader("Content-Length",  Long.toString(entity.getContentLength()));
         request.setEntity(entity);
       }
     }

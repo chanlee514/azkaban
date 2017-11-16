@@ -46,9 +46,9 @@ public class StatusApiClient extends RestfulApiClient<String> {
 
     // Set HTTP header
     List<NameValuePair> headerEntries = new ArrayList <NameValuePair>();
-    headerEntries.add(new BasicNameValuePair("Accept", "application/json"));
-    // headerEntries.add(new BasicNameValuePair("Content-Type", "application/json"));
+    headerEntries.add(new BasicNameValuePair("Content-Type", "application/json"));
 
+    // Send POST request
     String response = super.httpPost(uri, headerEntries, json.toString());
     return response;
   }
