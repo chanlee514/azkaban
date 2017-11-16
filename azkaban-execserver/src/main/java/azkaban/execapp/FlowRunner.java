@@ -25,6 +25,7 @@ import azkaban.execapp.event.JobCallbackManager;
 import azkaban.execapp.jmx.JmxJobMBeanManager;
 import azkaban.execapp.metric.JobDurationMetric;
 import azkaban.execapp.metric.NumFailedJobMetric;
+import azkaban.execapp.event.StatusEventListener;
 import azkaban.execapp.metric.NumRunningJobMetric;
 import azkaban.execapp.metric.TotalNumFlowJobsMetric;
 import azkaban.executor.*;
@@ -818,6 +819,8 @@ public class FlowRunner extends EventHandler implements Runnable {
         jobRunner.setDelayStart(node.getDelayedExecution());
         jobRunner.setLogSettings(logger, jobLogFileSize, jobLogNumFiles);
         jobRunner.addListener(listener);
+
+        jobRunner.addListener(new StatusEventListener());
 
         if (JobCallbackManager.isInitialized()) {
             jobRunner.addListener(JobCallbackManager.getInstance());
