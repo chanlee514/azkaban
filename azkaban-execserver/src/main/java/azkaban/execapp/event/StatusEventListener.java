@@ -157,26 +157,28 @@ public class StatusEventListener implements EventListener {
     // Define uri
     String env = runner.getProps().get(STATUS_ENVIRONMENT);
     String host = "ec-platform-status-" + env + ".sfiqplatform.com";
-    int port = 80;
+    int port = 8081;
+    boolean isHttp = false;
 
     // For local testing
     if (env.equalsIgnoreCase("local")) {
       logger.info("Running in local mode...");
       host = "localhost";
-      port = 8081;
+      isHttp = true;
     }
 
     String path = "/api/events/save";
     List<Pair<String, String>> paramsList = new ArrayList<Pair<String, String>>();
 
     URI uri = StatusApiClient.buildUri(host, port, path,
-        true, paramsList.toArray(new Pair[0]));
+        isHttp, paramsList.toArray(new Pair[0]));
 
     // Create JSON for event
     JsonObject json = newEventJson(
         type, status, tenantId, tags, results);
 
     logger.info(String.format("* Sending POST request with JSON: %s", json.toString()));
+    logger.info(String.format("curl -i -XPOST %s -d '%s'", uri.toString(), json.toString()));
 
     // Send POST request
     StatusApiClient client = new StatusApiClient();
