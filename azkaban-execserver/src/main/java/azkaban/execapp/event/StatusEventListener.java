@@ -4,20 +4,27 @@ import azkaban.event.Event;
 import azkaban.event.EventListener;
 import azkaban.execapp.JobRunner;
 import azkaban.executor.Status;
+import azkaban.jobExecutor.ProcessJob;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
 import azkaban.utils.RestfulApiClient;
+import com.google.common.base.Splitter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import java.net.URI;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.File;
+import java.io.FilenameFilter;
+import java.io.FileReader;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 
 import static azkaban.executor.Status.SUCCEEDED;
@@ -26,6 +33,8 @@ public class StatusEventListener implements EventListener {
 
   private static final Logger listenerLogger = Logger
       .getLogger(StatusEventListener.class);
+
+  public static final String STATUS_PREFIX = "status.";
 
   private static final String STATUS_ENABLED = "status.enabled";
   private static final String STATUS_TENANT = "status.tenant";
@@ -66,7 +75,15 @@ public class StatusEventListener implements EventListener {
           logger.info(key + ": " + value);
         }
 
-        if (event.getType() == Event.Type.JOB_STARTED) {
+        Map<String, String> outputProps = getOutputProps(logger, azkProps);
+        logger.info(String.format("*** %s", outputProps));
+
+        // Prioritize job-overwritten custom status
+        String customStatus = outputProps.get("status.status");
+        if (customStatus != null) {
+          logger.info(String.format("Custom status %s detected!", customStatus));
+          alert(logger, runner, event, customStatus);
+        } else if (event.getType() == Event.Type.JOB_STARTED) {
           alertJobStarted(logger, runner, event);
         } else if (event.getType() == Event.Type.JOB_FINISHED) {
           alertJobFinished(logger, runner, event);
@@ -83,6 +100,67 @@ public class StatusEventListener implements EventListener {
         listenerLogger.warn("((( Got an unsupported runner: "
             + event.getRunner().getClass().getName() + " )))");
     }
+  }
+
+  /**
+   * Get properties from standard JOB_OUTPUT_PROPS file
+   */
+  private Map<String, String> getOutputProps(Logger logger, Props azkProps) throws Exception {
+    Map<String, String> outputProps = Collections.emptyMap();
+
+    File file = getOutputPropFile(logger, azkProps);    
+    if (file != null) {
+      logger.info(String.format("Found job output props file %s", file));
+
+      // Read contents. Format must match JSON string
+      BufferedReader reader = new BufferedReader(new FileReader(file));
+      String contents = reader.readLine()
+          .replaceAll(Pattern.quote("{"), "")
+          .replaceAll(Pattern.quote("}"), "")
+          .replaceAll("\"", "")
+          .replaceAll(" ", "");
+      outputProps = Splitter.on(",").withKeyValueSeparator(":").split(contents);
+      reader.close();
+    }
+    return outputProps;
+  }
+
+  /**
+   * Get properties from standard JOB_OUTPUT_PROPS file
+   */
+  private File getOutputPropFile(Logger logger, Props azkProps) {
+    String dirName = azkProps.get("working.dir");
+    if (dirName == null) {
+      logger.info("Job property \"working.dir\" is not set");
+      return null;
+    }
+
+    String jobId = azkProps.get("azkaban.flow.flowid");
+    if (jobId == null) {
+      logger.info("Job property \"azkaban.flow.flowid\" is not set");
+      return null;
+    }
+
+    File dir = new File(dirName);
+    if (! dir.isDirectory()) return null;
+
+    File[] matches = dir.listFiles(
+      new FilenameFilter() {
+        @Override
+        public boolean accept(File dir, String name) {
+          return name.startsWith(jobId + "_output_");
+        }
+      }
+    );
+
+    if (matches.length > 1) {
+      logger.error("There can be only one output file per job!");
+      return null;
+    } else if (matches.length == 0) {
+      logger.info("No match for output prop file found!");
+      return null;
+    }
+    return matches[0];
   }
 
   private void alertJobStarted(
@@ -117,6 +195,7 @@ public class StatusEventListener implements EventListener {
     if (tags == null) tags = Collections.emptyMap();
 
     Map<String, String> results = Collections.emptyMap();
+    // TODO change to status.results
 
     String tenantId = this.getTenant(runner);
     String type = this.getType(runner);
@@ -156,13 +235,13 @@ public class StatusEventListener implements EventListener {
 
     // Define uri
     String env = runner.getProps().get(STATUS_ENVIRONMENT);
+    logger.info(String.format("Running in env %s...", env));
     String host = "ec-platform-status-" + env + ".sfiqplatform.com";
     int port = 8081;
     boolean isHttp = false;
 
     // For local testing
     if (env.equalsIgnoreCase("local")) {
-      logger.info("Running in local mode...");
       host = "localhost";
       isHttp = true;
     }
