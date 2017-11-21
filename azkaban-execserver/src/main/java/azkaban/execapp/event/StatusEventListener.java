@@ -12,12 +12,14 @@ import com.google.common.base.Splitter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
 import java.net.URI;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.FileReader;
+import java.lang.reflect.Type;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -75,14 +77,6 @@ public class StatusEventListener implements EventListener {
           logger.info(key + ": " + value);
         }
 
-        // TODO remove
-        logger.info("1. " + System.getenv("status.status")); // null
-        logger.info("2. " + System.getProperty("status.status")); // null
-        logger.info("3. " + System.getenv(ProcessJob.JOB_OUTPUT_PROP_FILE)); // null
-        logger.info("4. " + System.getProperty(ProcessJob.JOB_OUTPUT_PROP_FILE)); // null
-        logger.info("5. " + System.getenv("JOB_OUTPUT_PROP_FILE")); // null
-
-
         Props outputProps = getOutputProps(logger, runner, azkProps);
         logger.info("** Job output properties **");
         for (String key : outputProps.getKeySet()) {
@@ -94,11 +88,11 @@ public class StatusEventListener implements EventListener {
         String customStatus = outputProps.get("status.status");
         if (customStatus != null) {
           logger.info(String.format("Custom status %s detected!", customStatus));
-          alert(logger, runner, event, customStatus);
+          alert(logger, runner, event, customStatus, outputProps);
         } else if (event.getType() == Event.Type.JOB_STARTED) {
-          alertJobStarted(logger, runner, event);
+          alertJobStarted(logger, runner, event, outputProps);
         } else if (event.getType() == Event.Type.JOB_FINISHED) {
-          alertJobFinished(logger, runner, event);
+          alertJobFinished(logger, runner, event, outputProps);
         }
 
       } catch (Throwable e) {
@@ -115,7 +109,7 @@ public class StatusEventListener implements EventListener {
   }
 
   /**
-   * Get properties from standard JOB_OUTPUT_PROPS file
+   * Get properties from standard Azkaban JOB_OUTPUT_PROPS file
    */
   private Props getOutputProps(
       Logger logger,
@@ -128,14 +122,14 @@ public class StatusEventListener implements EventListener {
     if (file != null) {
       logger.info(String.format("Found job output props file %s", file));
 
-      // Read contents. Format must match JSON string
+      // Read contents. Format must be in JSON-style string
       BufferedReader reader = new BufferedReader(new FileReader(file));
-      String contents = reader.readLine()
-          .replaceAll(Pattern.quote("{"), "")
-          .replaceAll(Pattern.quote("}"), "")
-          .replaceAll("\"", "")
-          .replaceAll(" ", "");
-      Map<String, String> outputMap = Splitter.on(",").withKeyValueSeparator(":").split(contents);
+      String contents = reader.readLine();
+
+      // Parse to Props
+      Gson gson = new GsonBuilder().create();
+      Type type = new TypeToken<Map<String, String>>(){}.getType();
+      Map<String, String> outputMap = gson.fromJson(contents, type);
       outputProps.putAll(outputMap);
       reader.close();
     }
@@ -143,9 +137,13 @@ public class StatusEventListener implements EventListener {
   }
 
   /**
-   * Get properties from standard JOB_OUTPUT_PROPS file
+   * Find JOB_OUTPUT_PROPS file for current job
    */
-  private File getOutputPropFile(Logger logger, JobRunner runner, Props azkProps) {
+  private File getOutputPropFile(
+      Logger logger,
+      JobRunner runner,
+      Props azkProps) {
+
     String dirName = azkProps.get("working.dir");
     if (dirName == null) {
       logger.info("Job property \"working.dir\" is not set");
@@ -157,6 +155,7 @@ public class StatusEventListener implements EventListener {
       logger.error("Failed to get job id");
       return null;
     }
+    logger.info(String.format("Job id: %s", jobId));
 
     File dir = new File(dirName);
     if (! dir.isDirectory()) return null;
@@ -183,22 +182,24 @@ public class StatusEventListener implements EventListener {
   private void alertJobStarted(
       Logger logger,
       JobRunner runner,
-      Event event) throws Exception {
+      Event event,
+      Props outputProps) throws Exception {
 
-    alert(logger, runner, event, EVENT_STATUS_PENDING);
+    alert(logger, runner, event, EVENT_STATUS_PENDING, outputProps);
   }
 
   private void alertJobFinished(
       Logger logger,
       JobRunner runner,
-      Event event) throws Exception {
+      Event event,
+      Props outputProps) throws Exception {
 
     if (Status.isStatusFinished(runner.getStatus()) &&
         !runner.getStatus().equals(SUCCEEDED)) {
 
-      alert(logger, runner, event, EVENT_STATUS_FAILURE);
+      alert(logger, runner, event, EVENT_STATUS_FAILURE, outputProps);
     } else {
-      alert(logger, runner, event, EVENT_STATUS_SUCCESSFUL);
+      alert(logger, runner, event, EVENT_STATUS_SUCCESSFUL, outputProps);
     }
   }
 
@@ -206,13 +207,14 @@ public class StatusEventListener implements EventListener {
       Logger logger,
       JobRunner runner,
       Event event,
-      String status) throws Exception {
+      String status,
+      Props outputProps) throws Exception {
 
     Map<String, String> tags = this.getTags(logger, runner);
     if (tags == null) tags = Collections.emptyMap();
 
-    Map<String, String> results = Collections.emptyMap();
-    // TODO change to status.results
+    Map<String, String> results = outputProps.getMapByPrefix("status.results.");
+    logger.info(String.format("* Custom results: %s", results));
 
     String tenantId = this.getTenant(runner);
     String type = this.getType(runner);
