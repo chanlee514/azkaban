@@ -8,7 +8,6 @@ import azkaban.jobExecutor.ProcessJob;
 import azkaban.utils.Pair;
 import azkaban.utils.Props;
 import azkaban.utils.RestfulApiClient;
-import com.google.common.base.Splitter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
