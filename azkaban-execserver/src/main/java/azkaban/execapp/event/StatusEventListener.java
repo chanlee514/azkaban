@@ -75,8 +75,20 @@ public class StatusEventListener implements EventListener {
           logger.info(key + ": " + value);
         }
 
-        Map<String, String> outputProps = getOutputProps(logger, azkProps);
-        logger.info(String.format("*** %s", outputProps));
+        // TODO remove
+        logger.info("1. " + System.getenv("status.status")); // null
+        logger.info("2. " + System.getProperty("status.status")); // null
+        logger.info("3. " + System.getenv(ProcessJob.JOB_OUTPUT_PROP_FILE)); // null
+        logger.info("4. " + System.getProperty(ProcessJob.JOB_OUTPUT_PROP_FILE)); // null
+        logger.info("5. " + System.getenv("JOB_OUTPUT_PROP_FILE")); // null
+
+
+        Props outputProps = getOutputProps(logger, runner, azkProps);
+        logger.info("** Job output properties **");
+        for (String key : outputProps.getKeySet()) {
+          String value = outputProps.get(key);
+          logger.info(key + ": " + value);
+        }
 
         // Prioritize job-overwritten custom status
         String customStatus = outputProps.get("status.status");
@@ -105,10 +117,14 @@ public class StatusEventListener implements EventListener {
   /**
    * Get properties from standard JOB_OUTPUT_PROPS file
    */
-  private Map<String, String> getOutputProps(Logger logger, Props azkProps) throws Exception {
-    Map<String, String> outputProps = Collections.emptyMap();
+  private Props getOutputProps(
+      Logger logger,
+      JobRunner runner,
+      Props azkProps) throws Exception {
 
-    File file = getOutputPropFile(logger, azkProps);    
+    Props outputProps = new Props();
+
+    File file = getOutputPropFile(logger, runner, azkProps);    
     if (file != null) {
       logger.info(String.format("Found job output props file %s", file));
 
@@ -119,7 +135,8 @@ public class StatusEventListener implements EventListener {
           .replaceAll(Pattern.quote("}"), "")
           .replaceAll("\"", "")
           .replaceAll(" ", "");
-      outputProps = Splitter.on(",").withKeyValueSeparator(":").split(contents);
+      Map<String, String> outputMap = Splitter.on(",").withKeyValueSeparator(":").split(contents);
+      outputProps.putAll(outputMap);
       reader.close();
     }
     return outputProps;
@@ -128,16 +145,16 @@ public class StatusEventListener implements EventListener {
   /**
    * Get properties from standard JOB_OUTPUT_PROPS file
    */
-  private File getOutputPropFile(Logger logger, Props azkProps) {
+  private File getOutputPropFile(Logger logger, JobRunner runner, Props azkProps) {
     String dirName = azkProps.get("working.dir");
     if (dirName == null) {
       logger.info("Job property \"working.dir\" is not set");
       return null;
     }
 
-    String jobId = azkProps.get("azkaban.flow.flowid");
+    String jobId = runner.getJobId();
     if (jobId == null) {
-      logger.info("Job property \"azkaban.flow.flowid\" is not set");
+      logger.error("Failed to get job id");
       return null;
     }
 

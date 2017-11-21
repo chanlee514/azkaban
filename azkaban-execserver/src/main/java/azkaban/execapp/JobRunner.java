@@ -92,6 +92,10 @@ public class JobRunner extends EventHandler implements Runnable {
     this.jobtypeManager = jobtypeManager;
   }
 
+  public String getJobId() {
+    return this.jobId;
+  }
+
   public void setValidatedProxyUsers(Set<String> proxyUsers) {
     this.proxyUsers = proxyUsers;
   }
