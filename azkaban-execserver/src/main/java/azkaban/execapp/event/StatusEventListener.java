@@ -35,8 +35,8 @@ public class StatusEventListener implements EventListener {
   private static final Logger listenerLogger = Logger
       .getLogger(StatusEventListener.class);
 
-  public static final String STATUS_PREFIX = "status.";
-
+  private static final String STATUS_RESULTS_PREFIX = "status.results.";
+  private static final String STATUS_OVERRIDE_STATUS = "status.status";
   private static final String STATUS_ENABLED = "status.enabled";
   private static final String STATUS_TENANT = "status.tenant";
   private static final String STATUS_TYPE = "status.type";
@@ -84,7 +84,7 @@ public class StatusEventListener implements EventListener {
         }
 
         // Prioritize job-overwritten custom status
-        String customStatus = outputProps.get("status.status");
+        String customStatus = outputProps.get(STATUS_OVERRIDE_STATUS);
         if (customStatus != null) {
           logger.info(String.format("Custom status %s detected!", customStatus));
           alert(logger, runner, event, customStatus, outputProps);
@@ -212,7 +212,7 @@ public class StatusEventListener implements EventListener {
     Map<String, String> tags = this.getTags(logger, runner);
     if (tags == null) tags = Collections.emptyMap();
 
-    Map<String, String> results = outputProps.getMapByPrefix("status.results.");
+    Map<String, String> results = outputProps.getMapByPrefix(STATUS_RESULTS_PREFIX);
     logger.info(String.format("* Custom results: %s", results));
 
     String tenantId = this.getTenant(runner);
