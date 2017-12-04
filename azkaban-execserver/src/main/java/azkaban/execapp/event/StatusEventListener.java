@@ -42,9 +42,9 @@ public class StatusEventListener implements EventListener {
   private static final String STATUS_TYPE = "status.type";
   private static final String STATUS_ENVIRONMENT = "status.environment";
 
-  private static final String EVENT_STATUS_PENDING = "PENDING";
-  private static final String EVENT_STATUS_SUCCESSFUL = "SUCCESSFUL";
-  private static final String EVENT_STATUS_FAILURE = "FAILURE";
+  private static final String EVENT_STATUS_STARTED = "INITIALIZING";
+  private static final String EVENT_STATUS_SUCCESSFUL = "SUCCESS";
+  private static final String EVENT_STATUS_FAILURE = "FAILED";
 
   @Override
   public void handleEvent(Event event) {
@@ -59,12 +59,12 @@ public class StatusEventListener implements EventListener {
         boolean enabled = azkProps.getBoolean(STATUS_ENABLED, false);
 
         if (! enabled) {
-          logger.info("Status updates are not enabled (Azkaban Job Property: 'status.environment=dev|staging|prod')");
+          logger.info("Status updates are not enabled (Azkaban Job Property: 'status.enabled=true|false')");
           return;
         }
 
         if (! azkProps.containsKey(STATUS_ENVIRONMENT)) {
-          logger.info("Status Environment is not enabled (Azkaban Job Property: 'status.enabled=true|false')");
+          logger.info("Status Environment is not set (Azkaban Job Property: 'status.environment=dev|staging|prod')");
           return;
         }
 
@@ -184,7 +184,7 @@ public class StatusEventListener implements EventListener {
       Event event,
       Props outputProps) throws Exception {
 
-    alert(logger, runner, event, EVENT_STATUS_PENDING, outputProps);
+    alert(logger, runner, event, EVENT_STATUS_STARTED, outputProps);
   }
 
   private void alertJobFinished(
