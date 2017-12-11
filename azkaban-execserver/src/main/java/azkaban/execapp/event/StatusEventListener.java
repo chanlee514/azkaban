@@ -20,11 +20,14 @@ import java.io.FilenameFilter;
 import java.io.FileReader;
 import java.lang.reflect.Type;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 
@@ -36,15 +39,19 @@ public class StatusEventListener implements EventListener {
       .getLogger(StatusEventListener.class);
 
   private static final String STATUS_RESULTS_PREFIX = "status.results.";
-  private static final String STATUS_OVERRIDE_STATUS = "status.status";
   private static final String STATUS_ENABLED = "status.enabled";
   private static final String STATUS_TENANT = "status.tenant";
   private static final String STATUS_TYPE = "status.type";
   private static final String STATUS_ENVIRONMENT = "status.environment";
+  private static final String STATUS_OVERRIDE_STATUS = "status.status";
 
-  private static final String EVENT_STATUS_STARTED = "INITIALIZING";
-  private static final String EVENT_STATUS_SUCCESSFUL = "SUCCESS";
-  private static final String EVENT_STATUS_FAILURE = "FAILED";
+  private static final String EVENT_STARTED = "INITIALIZING";
+  private static final String EVENT_SUCCESS = "SUCCESS";
+  private static final String EVENT_FAILED = "FAILED";
+  private static final String EVENT_ERRORED = "ERRORED";
+  private static final String EVENT_CANCELLED = "CANCELLED";
+  private static final Set<String> allStatus = new HashSet<String>(Arrays.asList(
+      EVENT_STARTED, EVENT_SUCCESS, EVENT_FAILED, EVENT_ERRORED, EVENT_CANCELLED));
 
   @Override
   public void handleEvent(Event event) {
@@ -83,11 +90,15 @@ public class StatusEventListener implements EventListener {
           logger.info(key + ": " + value);
         }
 
-        // Prioritize job-overwritten custom status
+        // Prioritize job-overwritten status
         String customStatus = outputProps.get(STATUS_OVERRIDE_STATUS);
         if (customStatus != null) {
-          logger.info(String.format("Custom status %s detected!", customStatus));
-          alert(logger, runner, event, customStatus, outputProps);
+          if (allStatus.contains(customStatus)) {
+            logger.info(String.format("Overriding status to '%s'", customStatus));
+            alert(logger, runner, event, customStatus, outputProps);
+          } else {
+            logger.error(String.format("Invalid status: '%s'. Must match enums defined in status service", customStatus));
+          }
         } else if (event.getType() == Event.Type.JOB_STARTED) {
           alertJobStarted(logger, runner, event, outputProps);
         } else if (event.getType() == Event.Type.JOB_FINISHED) {
@@ -184,7 +195,7 @@ public class StatusEventListener implements EventListener {
       Event event,
       Props outputProps) throws Exception {
 
-    alert(logger, runner, event, EVENT_STATUS_STARTED, outputProps);
+    alert(logger, runner, event, EVENT_STARTED, outputProps);
   }
 
   private void alertJobFinished(
@@ -196,9 +207,12 @@ public class StatusEventListener implements EventListener {
     if (Status.isStatusFinished(runner.getStatus()) &&
         !runner.getStatus().equals(SUCCEEDED)) {
 
-      alert(logger, runner, event, EVENT_STATUS_FAILURE, outputProps);
+      // Add error code to status.results
+      String errorCode = runner.getStatus().toString();
+      outputProps.put(STATUS_RESULTS_PREFIX + "error.code", errorCode);
+      alert(logger, runner, event, EVENT_FAILED, outputProps);
     } else {
-      alert(logger, runner, event, EVENT_STATUS_SUCCESSFUL, outputProps);
+      alert(logger, runner, event, EVENT_SUCCESS, outputProps);
     }
   }
 
@@ -213,7 +227,6 @@ public class StatusEventListener implements EventListener {
     if (tags == null) tags = Collections.emptyMap();
 
     Map<String, String> results = outputProps.getMapByPrefix(STATUS_RESULTS_PREFIX);
-    logger.info(String.format("* Custom results: %s", results));
 
     String tenantId = this.getTenant(runner);
     String type = this.getType(runner);
@@ -222,7 +235,7 @@ public class StatusEventListener implements EventListener {
   }
 
   /**
-   * Sends new event to ALM Status Service
+   * Sends new event to EP Status Service
    **/
   private void sendEvent(
       Logger logger,
@@ -368,22 +381,5 @@ public class StatusEventListener implements EventListener {
       }
     }
     return tags;
-  }
-
-  /**
-   * Join string.
-   *
-   * @param strings   the strings
-   * @param separator the separator
-   * @return the string
-   */
-  public static String join(String[] strings, String separator) {
-    StringBuilder sb = new StringBuilder();
-    String sep = "";
-    for (String s : strings) {
-      sb.append(sep).append(s);
-      sep = separator;
-    }
-    return sb.toString();
   }
 }
